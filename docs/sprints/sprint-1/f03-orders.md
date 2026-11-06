@@ -17,11 +17,11 @@ The server rejects an empty cart, repeated product ID, invalid quantity, inactiv
 
 | Method/path | Request | Success | Failure |
 |---|---|---|---|
-| `POST /api/v1/orders` | `{ "items": [{ "menuItemId": "uuid", "quantity": 2 }] }` | `201`, `{ "data": { "id": "...", "status": "PENDING", "totalSatang": 13000, "items": [...] } }` | `400` malformed/empty/duplicate/invalid quantity; `401` no session; `403` wrong role; `409` unavailable/insufficient stock |
+| `POST /api/v1/orders` | `{ "items": [{ "menuItemId": "uuid", "quantity": 2 }] }` | `201`, `{ "data": { "id": "...", "status": "PENDING", "totalSatang": 13000, "items": [...] } }` | `400` malformed/empty/duplicate/invalid quantity or client-supplied authoritative price/total fields; `401` no session; `403` wrong role; `409` unavailable/insufficient stock |
 | `GET /api/v1/orders` | Customer session | `200`, list of only own orders (newest first) | `401`, `403` |
 | `GET /api/v1/orders/:id` | Customer session | `200`, saved owned order, item snapshots and status | `401`, `403`, `404` absent or another customer's ID |
 
-Never accept client-supplied `customerId`, role, `unitPriceSatang`, `totalSatang` or `status` as authoritative. Validate shape and quantity on the server. Return stable safe error codes (`INVALID_ORDER`, `OUT_OF_STOCK`, `ORDER_NOT_FOUND`) with no internal stack trace. `409` for unavailable stock is a chosen contract convention.
+Never accept client-supplied `customerId`, role, `unitPriceSatang`, `totalSatang` or `status` as authoritative. Validate shape and quantity on the server. Requests containing client-supplied authoritative price or total fields must be rejected with HTTP 400 and error code `INVALID_ORDER`. Valid orders must calculate prices using database values. Return stable safe error codes (`INVALID_ORDER`, `OUT_OF_STOCK`, `ORDER_NOT_FOUND`) with no internal stack trace. `409` for unavailable stock is a chosen contract convention.
 
 ## UI and data specification
 
@@ -35,7 +35,7 @@ Never accept client-supplied `customerId`, role, `unitPriceSatang`, `totalSatang
 | AC | Observable criterion | Test ID / level | Preconditions, action, expected outcome |
 |---|---|---|---|
 | AC-09 | Valid multi-item order is persisted. | TEST-09 / API+DB + selected E2E | Auth Customer, stocked menu; POST two items; verify `201`, `PENDING`, rows in Order/OrderItem and UI success. |
-| AC-10 | Authoritative total and historical unit prices are preserved. | TEST-10 / unit+API+DB | Send manipulated total/price; server ignores or rejects it by documented policy, calculates DB prices; later menu-price edit does not alter stored order. |
+| AC-10 | Authoritative total and historical unit prices are preserved; requests containing client-supplied authoritative price or total fields must be rejected with HTTP 400 and error code INVALID_ORDER, and valid orders must calculate prices using database values. | TEST-10 / unit+API+DB | Send request containing client-supplied authoritative price or total fields; expect HTTP 400 rejection with error code INVALID_ORDER. Send valid order request; expect HTTP 201 with prices calculated using database values; later menu-price edit does not alter stored order. |
 | AC-11 | Invalid orders fail without partial state change. | TEST-11 / API+DB | Empty/duplicate/zero/negative/fractional qty, inactive, nonexistent or insufficient item; expect `400`/`409`, no new order and no stock loss. |
 | AC-12 | Atomic reservations prevent overselling. | TEST-12 / API+DB concurrency | One unit available; fire two competing order POSTs; at most one succeeds and final stock remains nonnegative. |
 | AC-13 | Customer retrieves correct persisted own order. | TEST-13 / API+DB | Create order; GET list and detail (including after application restart check); verify items, total, status and owner. |

@@ -31,7 +31,7 @@ flowchart TD
 | UI | React, TypeScript, Vite | Small customer/operator screens, form validation, state and error feedback. |
 | API/application | Node.js, Express, TypeScript | Familiar REST-style API suitable for Supertest and course engineering workflow. |
 | Database | PostgreSQL with Prisma and migrations | Transactions, constraints, durable relations, repeatable local/cloud configuration. |
-| Tests | Unit test runner (Vitest or existing lab runner), Supertest API/database tests, selected Playwright browser tests | Cover rules, real persistence, permissions, and a critical UI journey. Final runner choice follows project bootstrap. |
+| Tests | Vitest as the test runner, Supertest for Express API requests, and Playwright for selected browser end-to-end tests | Cover rules, real persistence, permissions, and a critical UI journey. |
 | Deployment plan | One Docker image on GCP Cloud Run serving built frontend + API; Cloud SQL PostgreSQL | Single origin simplifies cookies and deployment; durable database is external to the container. Lab 5 establishes actual resources. |
 
 The team may substitute an equivalent familiar lab technology **only through an approved SDS revision before implementation**; do not mix stacks informally.
@@ -136,9 +136,9 @@ For Lab 5, package the accepted application with Docker and deploy the combined 
 
 ## 8. Verification architecture
 
-- **Unit:** validation, money calculation, allowed state transitions.
-- **API/database integration:** real PostgreSQL transaction, persistence, role/owner enforcement, boundary/negative cases, competing stock requests.
-- **Selected UI/end-to-end:** Customer login → menu → order → persisted details, Operator login → acceptance, plus a rejected case.
+- **Unit:** Vitest as the test runner for validation, money calculation, and allowed state transitions.
+- **API/database integration:** Supertest for Express API requests, verifying real PostgreSQL transactions, persistence, role/owner enforcement, boundary/negative cases, and competing stock requests.
+- **Selected UI/end-to-end:** Playwright for selected browser end-to-end tests (Customer login → menu → order → persisted details, Operator login → acceptance, plus a rejected case).
 - **Build/reproduction:** record commands, pass/fail/skip totals, tested commit SHA, setup instructions and screenshots in Deliverable 1 Part F.
 - **TDD evidence:** retain a meaningful rule test failing before behavior implementation and passing afterward; preserve specification/test/code chronology in Git.
 

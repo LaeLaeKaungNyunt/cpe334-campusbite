@@ -17,7 +17,7 @@ The four feature contracts contain the input, precondition, operation, expected 
 | TEST-07 | AC-07 | F-02 | API/UI | Sold-out and inactive items | TBD | Not run |
 | TEST-08 | AC-08 | F-02 | UI | Loading/empty/error | TBD | Not run |
 | TEST-09 | AC-09 | F-03 | API+DB/E2E | Valid order persistence | TBD | Not run |
-| TEST-10 | AC-10 | F-03 | Unit/API+DB | Server total and price snapshot | TBD | Not run |
+| TEST-10 | AC-10 | F-03 | Unit/API+DB | Rejection of tampered pricing fields and correct server calculation for a valid request | TBD | Not run |
 | TEST-11 | AC-11 | F-03 | API+DB | Invalid order no partial save | TBD | Not run |
 | TEST-12 | AC-12 | F-03 | API+DB | Competing stock reservations | TBD | Not run |
 | TEST-13 | AC-13 | F-03 | API+DB | Own order retrieval/persistence | TBD | Not run |
