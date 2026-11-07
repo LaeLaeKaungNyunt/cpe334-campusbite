@@ -13,9 +13,9 @@ The four feature contracts contain the input, precondition, operation, expected 
 | TEST-03 | AC-03 | F-01 | API | Anonymous protected access | TBD | Not run |
 | TEST-04 | AC-04 | F-01 | API+DB | Customer forbidden Operator operation | TBD | Not run |
 | TEST-05 | AC-05 | F-01 | API+DB/UI | Logout and revoked session | TBD | Not run |
-| TEST-06 | AC-06 | F-02 | API+DB | Persisted active menu/prices | TBD | Not run |
-| TEST-07 | AC-07 | F-02 | API/UI | Sold-out and inactive items | TBD | Not run |
-| TEST-08 | AC-08 | F-02 | UI | Loading/empty/error | TBD | Not run |
+| TEST-06 | AC-06 | F-02 | API+DB | Persisted active menu/prices | `backend/src/tests/menu.test.ts` | RED phase |
+| TEST-07 | AC-07 | F-02 | API+DB | Sold-out and inactive items | `backend/src/tests/menu.test.ts` | RED phase |
+| TEST-08 | AC-08 | F-02 | UI | Loading/empty/error, sold out, disabled control, THB price | `docs/sprints/sprint-1/f02-menu-test-procedure.md` (manual procedure; automation deferred) | Not run |
 | TEST-09 | AC-09 | F-03 | API+DB/E2E | Valid order persistence | TBD | Not run |
 | TEST-10 | AC-10 | F-03 | Unit/API+DB | Rejection of tampered pricing fields and correct server calculation for a valid request | TBD | Not run |
 | TEST-11 | AC-11 | F-03 | API+DB | Invalid order no partial save | TBD | Not run |
