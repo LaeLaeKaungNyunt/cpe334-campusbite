@@ -45,15 +45,16 @@ async function main() {
   ];
 
   for (const user of users) {
-    await prisma.user.upsert({
+    const existingUser = await prisma.user.findUnique({
       where: { email: user.email },
-      update: {
-        passwordHash: user.passwordHash,
-        role: user.role,
-      },
-      create: user,
     });
-    console.log(`[seed] Seeded user: ${user.email} (${user.role})`);
+
+    if (!existingUser) {
+      await prisma.user.create({ data: user });
+      console.log(`[seed] Created user: ${user.email} (${user.role})`);
+    } else {
+      console.log(`[seed] Preserving existing user: ${user.email} (${existingUser.role})`);
+    }
   }
 
   // 2. Menu Items
@@ -94,20 +95,20 @@ async function main() {
   ];
 
   for (const item of menuItems) {
-    await prisma.menuItem.upsert({
+    const existingItem = await prisma.menuItem.findUnique({
       where: { id: item.id },
-      update: {
-        name: item.name,
-        description: item.description,
-        priceSatang: item.priceSatang,
-        stockQuantity: item.stockQuantity,
-        isActive: item.isActive,
-      },
-      create: item,
     });
-    console.log(
-      `[seed] Seeded menu item: ${item.name} (${item.priceSatang} satang, stock: ${item.stockQuantity}, active: ${item.isActive})`,
-    );
+
+    if (!existingItem) {
+      await prisma.menuItem.create({ data: item });
+      console.log(
+        `[seed] Created menu item: ${item.name} (${item.priceSatang} satang, initial stock: ${item.stockQuantity}, active: ${item.isActive})`,
+      );
+    } else {
+      console.log(
+        `[seed] Preserving existing menu item: ${existingItem.name} (${existingItem.priceSatang} satang, current stock: ${existingItem.stockQuantity}, active: ${existingItem.isActive})`,
+      );
+    }
   }
 
   console.log('[seed] Seeding completed successfully.');

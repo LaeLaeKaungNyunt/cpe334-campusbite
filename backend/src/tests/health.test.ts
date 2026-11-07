@@ -14,6 +14,10 @@ describe('GET /api/v1/health', () => {
   it('does not leak internal headers, secrets, database info, or sensitive config', async () => {
     const response = await request(app).get('/api/v1/health');
 
+    // Header security: ensure framework identity is not exposed
+    expect(response.headers).not.toHaveProperty('x-powered-by');
+
+    // Body security: ensure no sensitive environment or database config is leaked
     expect(response.body).not.toHaveProperty('database');
     expect(response.body).not.toHaveProperty('password');
     expect(response.body).not.toHaveProperty('secret');

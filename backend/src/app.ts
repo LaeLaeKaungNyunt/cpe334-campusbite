@@ -2,6 +2,9 @@ import express, { type Request, type Response, type NextFunction } from 'express
 
 export const app = express();
 
+// Security: disable Express identifying header
+app.disable('x-powered-by');
+
 // Middleware: parse incoming JSON bodies
 app.use(express.json());
 

@@ -111,12 +111,16 @@ Follow these commands in order. Commands are provided for both **macOS / Linux**
 
 ### Step 1: Clone and Checkout Branch
 
+Clone the repository and check out `sprint-1-staging`, which serves as the shared integration branch for active Sprint 1 development:
+
 ```bash
 # macOS / Linux / Windows
 git clone https://github.com/LaeLaeKaungNyunt/cpe334-campusbite.git
 cd cpe334-campusbite
-git checkout chore/sprint1-foundation
+git checkout sprint-1-staging
 ```
+
+> **Branching & Integration Workflow:** All Sprint 1 feature branches (`feat/f01-auth`, `feat/f02-menu`, `feat/f03-orders`, `feat/f04-operator`) branch off and merge into `sprint-1-staging`. Once all Sprint 1 features, acceptance criteria, and integration checks pass, `sprint-1-staging` will be merged into `main`, which serves as the stable, evaluated release branch.
 
 ### Step 2: Use Node.js 24
 
@@ -130,11 +134,11 @@ node -v
 
 ### Step 3: Install Dependencies
 
-Install all root, backend, and frontend packages with the reproducible lockfile:
+Install all root, backend, and frontend packages reproducibly from the committed `package-lock.json`:
 
 ```bash
 # macOS / Linux / Windows
-npm install
+npm ci
 ```
 
 ### Step 4: Start Local PostgreSQL Containers
