@@ -1,0 +1,43 @@
+# CampusBite — Local PostgreSQL 16 Development & Test Services
+# For local development and test isolation only (nonproduction credentials)
+
+services:
+  db-dev:
+    image: postgres:16-alpine
+    container_name: campusbite-db-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: campusbite
+      POSTGRES_PASSWORD: campusbite_dev_pw
+      POSTGRES_DB: campusbite_dev
+    ports:
+      - "5433:5432"
+    volumes:
+      - campusbite_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U campusbite -d campusbite_dev"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  db-test:
+    image: postgres:16-alpine
+    container_name: campusbite-db-test
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: campusbite
+      POSTGRES_PASSWORD: campusbite_test_pw
+      POSTGRES_DB: campusbite_test
+    ports:
+      - "5434:5432"
+    volumes:
+      - campusbite_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U campusbite -d campusbite_test"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  campusbite_dev_data:
+  campusbite_test_data:
