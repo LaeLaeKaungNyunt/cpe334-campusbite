@@ -1,15 +1,27 @@
 import { useEffect, useState } from 'react';
 import { fetchMenuItems, type MenuItem } from './menuApi';
 import { MenuItemCard } from './MenuItemCard';
+import { fetchCurrentUser, readCart, saveCart } from '../orders/ordersApi';
 
 type LoadState = 'loading' | 'error' | 'success';
+
+interface CurrentUser {
+  id: string;
+  email: string;
+  role: 'CUSTOMER' | 'OPERATOR';
+}
 
 export function MenuPage() {
   const [items, setItems] = useState<MenuItem[]>([]);
   const [state, setState] = useState<LoadState>('loading');
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
-  const [selection, setSelection] = useState<Record<string, number>>({});
+  const [selection, setSelection] = useState<Record<string, number>>(() => readCart());
+  const [user, setUser] = useState<CurrentUser | null>(null);
+
+  useEffect(() => {
+    fetchCurrentUser().then((u) => setUser(u)).catch(() => setUser(null));
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -35,9 +47,13 @@ export function MenuPage() {
       const next = { ...current };
       if (quantity <= 0) delete next[menuItemId];
       else next[menuItemId] = quantity;
+      saveCart(next);
       return next;
     });
   }
+
+  const isOperator = user?.role === 'OPERATOR';
+  const cartItemCount = Object.values(selection).reduce((sum, quantity) => sum + quantity, 0);
 
   return (
     <div className="site-shell">
@@ -50,10 +66,18 @@ export function MenuPage() {
               <span className="tagline">Fresh picks for campus life</span>
             </span>
           </a>
-          <nav aria-label="Main navigation">
+          <nav className="order-nav" aria-label="Main navigation">
             <a className="nav-link" href="/">Home</a>
             <a className="nav-link nav-link-active" href="/menu" aria-current="page">Menu</a>
-            <a className="nav-link" href="/operator/orders">Operator</a>
+            {isOperator ? (
+              <a className="nav-link" href="/operator/orders">Operator Orders</a>
+            ) : (
+              <>
+                <a href="/cart">Review order ({cartItemCount})</a>
+                <a href="/orders">My orders</a>
+                {!user && <a href="/login">Sign in</a>}
+              </>
+            )}
           </nav>
         </div>
       </header>
@@ -94,6 +118,13 @@ export function MenuPage() {
               />
             ))}
           </section>
+        )}
+
+        {state === 'success' && !isOperator && Object.values(selection).some((quantity) => quantity > 0) && (
+          <div className="cart-summary-bar">
+            <span>{cartItemCount} item(s) selected</span>
+            <a className="btn btn-primary" href="/cart">Review your order</a>
+          </div>
         )}
       </main>
 

@@ -1,8 +1,8 @@
-
 import express, { type Request, type Response, type NextFunction } from 'express';
 import { cookieParserMiddleware, authenticate } from './middleware/auth.js';
 import { authRouter } from './routes/auth.js';
 import { menuRouter } from './routes/menuRoutes.js';
+import { orderRouter } from './routes/orderRoutes.js';
 import { operatorRouter } from './routes/operatorRoutes.js';
 
 export const app = express();
@@ -28,11 +28,26 @@ app.use('/api/v1/auth', authRouter);
 // F-02: Public, read-only menu browsing
 app.use('/api/v1', menuRouter);
 
+// F-03: Customer order creation and owned retrieval
+app.use('/api/v1/orders', orderRouter);
+
 // F-04: Operator order management routes
 app.use('/api/v1/operator', operatorRouter);
 
 // Centralized error handler
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  const isOrderJsonParseError =
+    _req.method === 'POST' &&
+    _req.path === '/api/v1/orders' &&
+    typeof err === 'object' &&
+    err !== null &&
+    'status' in err &&
+    err.status === 400;
+  if (isOrderJsonParseError) {
+    res.status(400).json({ error: { code: 'INVALID_ORDER', message: 'Order request must be valid JSON.' } });
+    return;
+  }
+
   const errorMessage = err instanceof Error ? err.message : 'Unknown error';
   console.error('[server error]', errorMessage);
 
