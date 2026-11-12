@@ -1,0 +1,21 @@
+{
+  "name": "cpe334-campusbite",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CampusBite — Campus Food Pre-Ordering and Pickup Management System",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently -n \"backend,frontend\" -c \"blue,green\" \"npm --workspace=backend run dev\" \"npm --workspace=frontend run dev\"",
+    "build": "npm --workspace=backend run build && npm --workspace=frontend run build",
+    "test": "npm --workspace=backend run test",
+    "db:migrate": "npm --workspace=backend run db:migrate",
+    "db:seed": "npm --workspace=backend run db:seed",
+    "db:check": "npm --workspace=backend run db:check"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
