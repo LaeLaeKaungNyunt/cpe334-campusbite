@@ -15,6 +15,7 @@ const ids = {
   sandwich: 'c3555555-5555-4555-8555-555555555555',
   soldOut: 'c3666666-6666-4666-8666-666666666666',
   inactive: 'c3777777-7777-4777-8777-777777777777',
+  seededStyle: 'a5555555-5555-5555-5555-555555555555',
 };
 
 let prisma: PrismaClient;
@@ -68,6 +69,7 @@ beforeAll(async () => {
       { id: ids.sandwich, name: `${fixturePrefix} Chicken Sandwich`, priceSatang: 8500, stockQuantity: 5, isActive: true },
       { id: ids.soldOut, name: `${fixturePrefix} Sold Out`, priceSatang: 4500, stockQuantity: 0, isActive: true },
       { id: ids.inactive, name: `${fixturePrefix} Inactive`, priceSatang: 7500, stockQuantity: 5, isActive: false },
+      { id: ids.seededStyle, name: `${fixturePrefix} Seeded Style UUID`, priceSatang: 5200, stockQuantity: 3, isActive: true },
     ],
   });
   await createSession(ids.customerA, 'customerA');
@@ -81,6 +83,7 @@ beforeEach(async () => {
   await prisma.menuItem.updateMany({ where: { id: ids.sandwich }, data: { priceSatang: 8500, stockQuantity: 5, isActive: true } });
   await prisma.menuItem.updateMany({ where: { id: ids.soldOut }, data: { priceSatang: 4500, stockQuantity: 0, isActive: true } });
   await prisma.menuItem.updateMany({ where: { id: ids.inactive }, data: { priceSatang: 7500, stockQuantity: 5, isActive: false } });
+  await prisma.menuItem.updateMany({ where: { id: ids.seededStyle }, data: { priceSatang: 5200, stockQuantity: 3, isActive: true } });
 });
 
 afterAll(async () => {
@@ -93,6 +96,28 @@ afterAll(async () => {
 });
 
 describe('F-03 customer orders API', () => {
+  it('accepts a seeded-style menu UUID returned by the public menu API', async () => {
+    const menuResponse = await request(app).get('/api/v1/menu-items');
+    expect(menuResponse.status).toBe(200);
+    const menuItem = menuResponse.body.data.find((item: { id: string }) => item.id === ids.seededStyle);
+    expect(menuItem).toMatchObject({ id: ids.seededStyle, priceSatang: 5200, isAvailable: true });
+
+    const orderResponse = await request(app)
+      .post('/api/v1/orders')
+      .set('Cookie', cookies.customerA)
+      .send({ items: [{ menuItemId: menuItem.id, quantity: 1 }] });
+
+    expect(orderResponse.status).toBe(201);
+    expect(orderResponse.body.data.totalSatang).toBe(5200);
+    expect(orderResponse.body.data.items).toContainEqual(expect.objectContaining({
+      menuItemId: ids.seededStyle,
+      quantity: 1,
+      unitPriceSatang: 5200,
+      lineTotalSatang: 5200,
+    }));
+    expect(await prisma.menuItem.findUnique({ where: { id: ids.seededStyle } })).toMatchObject({ stockQuantity: 2 });
+  });
+
   it('TEST-09 / AC-09: creates a persisted multi-item PENDING, UNPAID order with saved price snapshots and decrements stock', async () => {
     const response = await request(app).post('/api/v1/orders').set('Cookie', cookies.customerA).send({
       items: [

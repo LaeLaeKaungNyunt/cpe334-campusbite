@@ -354,6 +354,226 @@ footer {
   justify-content: space-between;
 }
 
+.order-nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.order-nav a,
+.order-text-link {
+  color: #9a3f22;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.order-nav a {
+  padding: 0.55rem 0.7rem;
+  border-radius: 999px;
+}
+
+.order-nav a:hover,
+.order-nav a:focus-visible,
+.order-text-link:hover {
+  background: #f7e9df;
+  text-decoration: underline;
+}
+
+.order-page {
+  width: min(820px, 100%);
+  margin: 0 auto;
+  padding: 3rem 1.5rem 4rem;
+  flex: 1;
+}
+
+.order-heading {
+  margin-bottom: 1.5rem;
+}
+
+.order-heading .eyebrow,
+.order-panel .eyebrow {
+  color: #a34223;
+  font-size: 0.78rem;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.order-heading h1 {
+  margin: 0.35rem 0;
+  color: #302820;
+  font-size: clamp(1.8rem, 5vw, 2.5rem);
+}
+
+.order-heading > p:last-child,
+.order-panel > p {
+  color: #746b60;
+  margin: 0.55rem 0 1rem;
+}
+
+.order-panel,
+.saved-order {
+  padding: 1.4rem;
+  background: #fffefa;
+  border: 1px solid #eee8dc;
+  border-radius: 16px;
+  box-shadow: 0 5px 18px rgba(70, 47, 27, 0.04);
+}
+
+.order-panel h1,
+.order-panel h2 {
+  color: #302820;
+  margin-bottom: 0.6rem;
+}
+
+.order-panel code,
+.order-muted code {
+  overflow-wrap: anywhere;
+}
+
+.review-lines,
+.saved-orders {
+  list-style: none;
+}
+
+.review-lines li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid #eee8dc;
+}
+
+.review-lines li > div:first-child,
+.review-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.review-lines li > div:first-child {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.review-lines li span,
+.order-muted {
+  color: #746b60;
+  font-size: 0.9rem;
+}
+
+.review-controls button {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 8px;
+  color: white;
+  background: #a34223;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.review-controls button:disabled {
+  color: #8a8379;
+  background: #e9e4dc;
+  cursor: not-allowed;
+}
+
+.review-total,
+.order-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 1.2rem;
+}
+
+.review-total {
+  color: #302820;
+  font-size: 1.12rem;
+}
+
+.review-total strong {
+  color: #9c3d20;
+}
+
+.order-actions {
+  justify-content: flex-end;
+}
+
+.order-error {
+  padding: 0.8rem 1rem;
+  margin-bottom: 1rem;
+  color: #7d3021;
+  background: #fae4dc;
+  border: 1px solid #edc4b5;
+  border-radius: 10px;
+}
+
+.remove-unavailable {
+  margin: 0.5rem 0.3rem 0 0;
+  padding: 0.25rem 0.45rem;
+  color: #7d3021;
+  background: #fffefa;
+  border: 1px solid #edc4b5;
+  border-radius: 6px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.saved-orders {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.saved-order a {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: #302820;
+  text-decoration: none;
+}
+
+.saved-order a:hover strong {
+  color: #9c3d20;
+  text-decoration: underline;
+}
+
+.saved-order a span {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.saved-order a span:last-child {
+  text-align: right;
+}
+
+.saved-order small {
+  color: #746b60;
+}
+
+.cart-summary-bar {
+  position: sticky;
+  bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: fit-content;
+  max-width: 100%;
+  margin: 1.5rem 0 0 auto;
+  padding: 0.8rem 1rem;
+  color: #302820;
+  background: #fffefa;
+  border: 1px solid #eee8dc;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(70, 47, 27, 0.12);
+}
+
 .site-header .brand {
   text-decoration: none;
 }
@@ -562,6 +782,31 @@ footer {
 }
 
 @media (max-width: 680px) {
+  .site-header-inner {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.8rem;
+    padding: 0.8rem 1rem;
+  }
+
+  .order-nav {
+    justify-content: flex-start;
+  }
+
+  .order-page {
+    padding: 2rem 1rem 3rem;
+  }
+
+  .review-lines li {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .review-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
   .menu-page {
     padding: 2.4rem 1rem 3rem;
   }

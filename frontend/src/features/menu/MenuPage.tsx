@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { fetchMenuItems, type MenuItem } from './menuApi';
 import { MenuItemCard } from './MenuItemCard';
+import { readCart, saveCart } from '../orders/ordersApi';
 
 type LoadState = 'loading' | 'error' | 'success';
 
@@ -9,7 +10,7 @@ export function MenuPage() {
   const [state, setState] = useState<LoadState>('loading');
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
-  const [selection, setSelection] = useState<Record<string, number>>({});
+  const [selection, setSelection] = useState<Record<string, number>>(() => readCart());
 
   useEffect(() => {
     const controller = new AbortController();
@@ -35,6 +36,7 @@ export function MenuPage() {
       const next = { ...current };
       if (quantity <= 0) delete next[menuItemId];
       else next[menuItemId] = quantity;
+      saveCart(next);
       return next;
     });
   }
@@ -50,8 +52,11 @@ export function MenuPage() {
               <span className="tagline">Fresh picks for campus life</span>
             </span>
           </a>
-          <nav aria-label="Main navigation">
+          <nav className="order-nav" aria-label="Main navigation">
             <a className="nav-link nav-link-active" href="/menu" aria-current="page">Menu</a>
+            <a href="/cart">Review order ({Object.values(selection).reduce((sum, quantity) => sum + quantity, 0)})</a>
+            <a href="/orders">My orders</a>
+            <a href="/login">Sign in</a>
           </nav>
         </div>
       </header>
@@ -92,6 +97,12 @@ export function MenuPage() {
               />
             ))}
           </section>
+        )}
+        {state === 'success' && Object.values(selection).some((quantity) => quantity > 0) && (
+          <div className="cart-summary-bar">
+            <span>{Object.values(selection).reduce((sum, quantity) => sum + quantity, 0)} item(s) selected</span>
+            <a className="btn btn-primary" href="/cart">Review your order</a>
+          </div>
         )}
       </main>
 
