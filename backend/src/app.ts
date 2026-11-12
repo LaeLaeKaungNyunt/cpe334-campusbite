@@ -1,6 +1,8 @@
+
 import express, { type Request, type Response, type NextFunction } from 'express';
 import { cookieParserMiddleware, authenticate } from './middleware/auth.js';
 import { authRouter } from './routes/auth.js';
+import { menuRouter } from './routes/menuRoutes.js';
 
 export const app = express();
 
@@ -19,8 +21,11 @@ app.get('/api/v1/health', (_req: Request, res: Response) => {
   res.status(200).json({ status: 'ok' });
 });
 
-// Authentication routes
+// F-01: Authentication routes
 app.use('/api/v1/auth', authRouter);
+
+// F-02: Public, read-only menu browsing
+app.use('/api/v1', menuRouter);
 
 // Centralized error handler
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {

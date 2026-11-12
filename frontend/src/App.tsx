@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { MenuPage } from './features/menu/MenuPage';
 
 interface AuthUser {
   id: string;
@@ -6,18 +7,22 @@ interface AuthUser {
   role: 'CUSTOMER' | 'OPERATOR';
 }
 
+
 interface HealthResponse {
   status: string;
 }
 
-export function App() {
+
+function HomePage() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
+
   const [currentView, setCurrentView] = useState<'home' | 'login'>(() => {
     return window.location.pathname === '/login' ? 'login' : 'home';
   });
 
   // Health check state
+
   const [healthStatus, setHealthStatus] = useState<'loading' | 'online' | 'offline'>('loading');
   const [healthDetails, setHealthDetails] = useState<string>('Checking backend connection...');
 
@@ -193,6 +198,11 @@ export function App() {
           </div>
 
           <div className="nav-actions">
+
+<a className="home-menu-link" href="/menu">
+  Browse menu
+</a>
+
             {authLoading ? (
               <span style={{ fontSize: '0.85rem', color: '#718096' }}>Checking session...</span>
             ) : currentUser ? (
@@ -372,4 +382,8 @@ export function App() {
       </footer>
     </>
   );
+}
+
+export function App() {
+  return window.location.pathname === '/menu' ? <MenuPage /> : <HomePage />;
 }
