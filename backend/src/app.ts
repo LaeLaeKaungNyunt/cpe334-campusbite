@@ -3,6 +3,7 @@ import express, { type Request, type Response, type NextFunction } from 'express
 import { cookieParserMiddleware, authenticate } from './middleware/auth.js';
 import { authRouter } from './routes/auth.js';
 import { menuRouter } from './routes/menuRoutes.js';
+import { operatorRouter } from './routes/operatorRoutes.js';
 
 export const app = express();
 
@@ -26,6 +27,9 @@ app.use('/api/v1/auth', authRouter);
 
 // F-02: Public, read-only menu browsing
 app.use('/api/v1', menuRouter);
+
+// F-04: Operator order management routes
+app.use('/api/v1/operator', operatorRouter);
 
 // Centralized error handler
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {

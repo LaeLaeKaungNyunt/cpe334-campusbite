@@ -51,7 +51,9 @@ export function MenuPage() {
             </span>
           </a>
           <nav aria-label="Main navigation">
+            <a className="nav-link" href="/">Home</a>
             <a className="nav-link nav-link-active" href="/menu" aria-current="page">Menu</a>
+            <a className="nav-link" href="/operator/orders">Operator</a>
           </nav>
         </div>
       </header>

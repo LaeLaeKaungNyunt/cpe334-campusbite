@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { MenuPage } from './features/menu/MenuPage';
+import { OperatorOrdersPage } from './features/operator/OperatorOrdersPage';
 
 interface AuthUser {
   id: string;
@@ -203,6 +204,12 @@ function HomePage() {
   Browse menu
 </a>
 
+{currentUser?.role === 'OPERATOR' && (
+  <a className="home-menu-link" href="/operator/orders" style={{ color: '#dd6b20' }}>
+    Operator Orders
+  </a>
+)}
+
             {authLoading ? (
               <span style={{ fontSize: '0.85rem', color: '#718096' }}>Checking session...</span>
             ) : currentUser ? (
@@ -367,7 +374,7 @@ function HomePage() {
                   <span>
                     <strong>F-04</strong> — Operator Order Acceptance &amp; Processing
                   </span>
-                  <span className="feature-tag tag-pending">Issue #4</span>
+                  <span className="feature-tag tag-active">Implemented (Issue #4)</span>
                 </li>
               </ul>
             </section>
@@ -385,5 +392,7 @@ function HomePage() {
 }
 
 export function App() {
-  return window.location.pathname === '/menu' ? <MenuPage /> : <HomePage />;
+  if (window.location.pathname === '/menu') return <MenuPage />;
+  if (window.location.pathname === '/operator/orders') return <OperatorOrdersPage />;
+  return <HomePage />;
 }
