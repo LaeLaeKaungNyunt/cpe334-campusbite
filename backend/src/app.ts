@@ -1,4 +1,5 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
+import { menuRouter } from './routes/menuRoutes.js';
 
 export const app = express();
 
@@ -12,6 +13,9 @@ app.use(express.json());
 app.get('/api/v1/health', (_req: Request, res: Response) => {
   res.status(200).json({ status: 'ok' });
 });
+
+// Public, read-only menu browsing. Feature routes remain separate from the app shell.
+app.use('/api/v1', menuRouter);
 
 // Centralized error handler
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {

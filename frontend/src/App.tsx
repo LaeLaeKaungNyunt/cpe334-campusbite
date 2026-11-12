@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
+import { MenuPage } from './features/menu/MenuPage';
 
 interface HealthResponse {
   status: string;
 }
 
-export function App() {
+function HomePage() {
   const [healthStatus, setHealthStatus] = useState<'loading' | 'online' | 'offline'>('loading');
   const [healthDetails, setHealthDetails] = useState<string>('Checking backend connection...');
 
@@ -59,6 +60,7 @@ export function App() {
               <p className="tagline">Campus Food Pre-Ordering and Pickup Management System</p>
             </div>
           </div>
+          <a className="home-menu-link" href="/menu">Browse menu</a>
         </div>
       </header>
 
@@ -118,4 +120,8 @@ export function App() {
       </footer>
     </>
   );
+}
+
+export function App() {
+  return window.location.pathname === '/menu' ? <MenuPage /> : <HomePage />;
 }

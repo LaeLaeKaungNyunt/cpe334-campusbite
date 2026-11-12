@@ -163,3 +163,278 @@ footer {
   border-top: 1px solid #e2e8f0;
   background: #ffffff;
 }
+
+.home-menu-link {
+  color: #9a3412;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.home-menu-link:hover,
+.home-menu-link:focus-visible {
+  text-decoration: underline;
+}
+
+.site-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #fbf8f2;
+  color: #29261f;
+}
+
+.site-header {
+  background: #fffefa;
+  border-bottom: 1px solid #eee8dc;
+}
+
+.site-header-inner {
+  max-width: 1120px;
+  min-height: 78px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.site-header .brand {
+  text-decoration: none;
+}
+
+.site-header .logo-badge {
+  background: #b84a25;
+  border-radius: 10px;
+  padding: 0.55rem 0.7rem;
+}
+
+.brand-name,
+.tagline {
+  display: block;
+}
+
+.brand-name {
+  color: #302820;
+  font-size: 1.12rem;
+  font-weight: 750;
+}
+
+.site-header .tagline {
+  margin-top: 0.1rem;
+  color: #82786b;
+  font-size: 0.78rem;
+}
+
+.nav-link {
+  color: #a34223;
+  font-weight: 700;
+  padding: 0.65rem 0.9rem;
+  text-decoration: none;
+  border-radius: 999px;
+}
+
+.nav-link-active,
+.nav-link:hover {
+  background: #f7e9df;
+}
+
+.menu-page {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  padding: 3.5rem 1.5rem 4rem;
+  flex: 1;
+}
+
+.menu-intro {
+  margin-bottom: 2rem;
+}
+
+.menu-intro .eyebrow {
+  color: #a34223;
+  font-size: 0.78rem;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.menu-intro h1 {
+  color: #302820;
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+  margin: 0.55rem 0;
+}
+
+.menu-intro > p:last-child {
+  color: #746b60;
+  font-size: 1.05rem;
+}
+
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.menu-item-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 164px;
+  padding: 1.35rem;
+  background: #fffefa;
+  border: 1px solid #eee8dc;
+  border-radius: 16px;
+  box-shadow: 0 5px 18px rgba(70, 47, 27, 0.04);
+}
+
+.menu-item-content {
+  min-width: 0;
+}
+
+.menu-item-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.menu-item-heading h2 {
+  color: #302820;
+  font-size: 1.15rem;
+}
+
+.menu-item-description {
+  color: #746b60;
+  font-size: 0.92rem;
+  margin-top: 0.45rem;
+}
+
+.menu-item-price {
+  color: #9c3d20;
+  font-size: 1.1rem;
+  font-weight: 750;
+  margin-top: 0.85rem;
+}
+
+.sold-out-badge {
+  padding: 0.2rem 0.55rem;
+  color: #8a3b27;
+  background: #fae4dc;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+.quantity-control {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+.quantity-control output {
+  min-width: 1.5rem;
+  text-align: center;
+  font-weight: 700;
+}
+
+.quantity-button,
+.retry-button {
+  border: 0;
+  border-radius: 10px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0.55rem 0.8rem;
+  color: #fff;
+  background: #a34223;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.quantity-button:hover:not(:disabled),
+.retry-button:hover {
+  background: #853619;
+}
+
+.quantity-button:focus-visible,
+.retry-button:focus-visible {
+  outline: 3px solid #edb38f;
+  outline-offset: 2px;
+}
+
+.quantity-button:disabled {
+  color: #8a8379;
+  background: #e9e4dc;
+  cursor: not-allowed;
+}
+
+.quantity-button-disabled {
+  flex-shrink: 0;
+}
+
+.menu-message {
+  padding: 2rem;
+  color: #61594f;
+  background: #fffefa;
+  border: 1px solid #eee8dc;
+  border-radius: 16px;
+  text-align: center;
+}
+
+.menu-error h2 {
+  color: #7d3021;
+  font-size: 1.2rem;
+  margin-bottom: 0.45rem;
+}
+
+.menu-error p {
+  margin-bottom: 1rem;
+}
+
+.site-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.4rem max(1.5rem, calc((100% - 1120px) / 2));
+  color: #82786b;
+  background: #fffefa;
+  border-top: 1px solid #eee8dc;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 680px) {
+  .menu-page {
+    padding: 2.4rem 1rem 3rem;
+  }
+
+  .menu-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .menu-item-card {
+    padding: 1.1rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .site-header-inner {
+    padding: 0 1rem;
+  }
+
+  .site-header .tagline {
+    display: none;
+  }
+
+  .menu-item-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .site-footer {
+    flex-direction: column;
+    padding: 1.2rem 1rem;
+  }
+}

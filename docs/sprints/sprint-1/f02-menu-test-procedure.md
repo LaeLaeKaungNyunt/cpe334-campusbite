@@ -1,8 +1,8 @@
 # F-02 AC-08 UI verification procedure
 
-This procedure is the manual AC-08 fallback while the frontend has no UI test
-runner, browser automation dependency, or `/menu` implementation. These checks
-are defined, not executed; record results only after running them against the
+This is the manual AC-08 procedure. The frontend currently has no UI test
+runner or browser automation dependency. Checks not listed in the execution
+record are pending; record further results only after running them against the
 implemented feature.
 
 ## Setup
@@ -23,5 +23,20 @@ implemented feature.
 | Disabled purchase control | Inspect and try to activate the sold-out item's purchase control. | Purchase control is disabled and cannot add/select the sold-out item. |
 | THB formatting | Return an item with `priceSatang: 6500`. | The displayed price is exactly `฿65.00`. |
 
-Automated UI coverage is deferred until a menu screen and frontend browser-test
-setup exist. Do not record any manual check as passed before performing it.
+Automated UI coverage is deferred until a suitable frontend browser-test setup
+is available. Do not record any manual check as passed before performing it.
+
+## Execution record — 7 November 2026
+
+The development servers were started with `npm run dev`. An HTTP smoke check
+using `curl.exe` returned HTTP 200 for `/menu` (Vite HTML application shell)
+and HTTP 200 for `/api/v1/menu-items` through the Vite proxy. The real API
+response contained three active records: Chicken Sandwich, Croissant
+(`stockQuantity: 0`, `isAvailable: false`) and Iced Latte (`priceSatang: 6500`,
+`isAvailable: true`); the inactive Seasonal Matcha Latte was absent. This
+confirms the route and database-backed proxy response, but does not confirm
+React rendering in a browser.
+
+Browser visual/interaction checks remain **not run**: loading, empty, error and
+retry states, Sold Out badge/control behavior, displayed `฿65.00`, and mobile
+layout. No temporary database fixture was changed during the HTTP smoke check.
