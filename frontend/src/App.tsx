@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { MenuPage } from './features/menu/MenuPage';
+import { CartPage, OrderDetailPage, OrdersPage } from './features/orders/OrderPages';
 
 interface AuthUser {
   id: string;
@@ -385,5 +386,11 @@ function HomePage() {
 }
 
 export function App() {
-  return window.location.pathname === '/menu' ? <MenuPage /> : <HomePage />;
+  const path = window.location.pathname;
+  if (path === '/menu') return <MenuPage />;
+  if (path === '/cart') return <CartPage />;
+  if (path === '/orders') return <OrdersPage />;
+  const orderMatch = path.match(/^\/orders\/([^/]+)$/);
+  if (orderMatch) return <OrderDetailPage orderId={decodeURIComponent(orderMatch[1])} />;
+  return <HomePage />;
 }
