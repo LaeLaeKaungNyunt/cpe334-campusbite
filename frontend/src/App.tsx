@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { MenuPage } from './features/menu/MenuPage';
 import { CartPage, OrderDetailPage, OrdersPage } from './features/orders/OrderPages';
+import { OperatorOrdersPage } from './features/operator/OperatorOrdersPage';
 
 interface AuthUser {
   id: string;
@@ -8,11 +9,9 @@ interface AuthUser {
   role: 'CUSTOMER' | 'OPERATOR';
 }
 
-
 interface HealthResponse {
   status: string;
 }
-
 
 function HomePage() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
@@ -23,7 +22,6 @@ function HomePage() {
   });
 
   // Health check state
-
   const [healthStatus, setHealthStatus] = useState<'loading' | 'online' | 'offline'>('loading');
   const [healthDetails, setHealthDetails] = useState<string>('Checking backend connection...');
 
@@ -199,10 +197,26 @@ function HomePage() {
           </div>
 
           <div className="nav-actions">
+            <a className="home-menu-link" href="/menu">
+              Browse menu
+            </a>
 
-<a className="home-menu-link" href="/menu">
-  Browse menu
-</a>
+            {currentUser?.role === 'CUSTOMER' && (
+              <>
+                <a className="home-menu-link" href="/cart">
+                  Cart
+                </a>
+                <a className="home-menu-link" href="/orders">
+                  My Orders
+                </a>
+              </>
+            )}
+
+            {currentUser?.role === 'OPERATOR' && (
+              <a className="home-menu-link" href="/operator/orders" style={{ color: '#dd6b20' }}>
+                Operator Orders
+              </a>
+            )}
 
             {authLoading ? (
               <span style={{ fontSize: '0.85rem', color: '#718096' }}>Checking session...</span>
@@ -356,19 +370,19 @@ function HomePage() {
                   <span>
                     <strong>F-02</strong> — Menu Browsing &amp; Real-time Stock Display
                   </span>
-                  <span className="feature-tag tag-pending">Issue #2</span>
+                  <span className="feature-tag tag-active">Implemented (Issue #2)</span>
                 </li>
                 <li>
                   <span>
                     <strong>F-03</strong> — Customer Orders &amp; Atomic Stock Reservation
                   </span>
-                  <span className="feature-tag tag-pending">Issue #3</span>
+                  <span className="feature-tag tag-active">Implemented (Issue #3)</span>
                 </li>
                 <li>
                   <span>
                     <strong>F-04</strong> — Operator Order Acceptance &amp; Processing
                   </span>
-                  <span className="feature-tag tag-pending">Issue #4</span>
+                  <span className="feature-tag tag-active">Implemented (Issue #4)</span>
                 </li>
               </ul>
             </section>
@@ -392,5 +406,6 @@ export function App() {
   if (path === '/orders') return <OrdersPage />;
   const orderMatch = path.match(/^\/orders\/([^/]+)$/);
   if (orderMatch) return <OrderDetailPage orderId={decodeURIComponent(orderMatch[1])} />;
+  if (path === '/operator/orders') return <OperatorOrdersPage />;
   return <HomePage />;
 }
