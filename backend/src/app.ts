@@ -4,6 +4,7 @@ import { authRouter } from './routes/auth.js';
 import { menuRouter } from './routes/menuRoutes.js';
 import { orderRouter } from './routes/orderRoutes.js';
 import { operatorRouter } from './routes/operatorRoutes.js';
+import { prisma } from './lib/prisma.js';
 
 export const app = express();
 
@@ -20,6 +21,22 @@ app.use(authenticate);
 // Public health check endpoint
 app.get('/api/v1/health', (_req: Request, res: Response) => {
   res.status(200).json({ status: 'ok' });
+});
+// Public database readiness check for Cloud Run.
+// Returns 503 if PostgreSQL is unavailable.
+app.get('/api/ready', async (_req: Request, res: Response) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+
+    res.status(200).json({
+      status: 'ready',
+      db: 'connected',
+    });
+  } catch {
+    res.status(503).json({
+      status: 'not_ready',
+    });
+  }
 });
 
 // F-01: Authentication routes

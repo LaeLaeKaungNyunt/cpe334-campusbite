@@ -4,7 +4,13 @@ import { PrismaClient, UserRole } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const DEMO_PASSWORD = process.env.SEED_DEMO_PASSWORD || 'DemoPassword123!';
+const DEMO_PASSWORD = process.env.SEED_DEMO_PASSWORD;
+
+if (!DEMO_PASSWORD || DEMO_PASSWORD.length < 12) {
+  throw new Error(
+    '[seed] SEED_DEMO_PASSWORD must be configured with a private password of at least 12 characters.'
+  );
+}
 
 // Stable UUIDs for synthetic seed records (valid RFC 4122 hex digits)
 export const SEED_IDS = {
