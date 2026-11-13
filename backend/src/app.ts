@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url';
+import { extname, join } from 'node:path';
 import express, { type Request, type Response, type NextFunction } from 'express';
 import { cookieParserMiddleware, authenticate } from './middleware/auth.js';
 import { authRouter } from './routes/auth.js';
@@ -50,6 +52,35 @@ app.use('/api/v1/orders', orderRouter);
 
 // F-04: Operator order management routes
 app.use('/api/v1/operator', operatorRouter);
+
+/**
+ * Serve the built React frontend in production.
+ * Development continues using Vite on port 5173.
+ */
+if (process.env.NODE_ENV === 'production') {
+  const frontendDist = fileURLToPath(
+    new URL('../../frontend/dist/', import.meta.url)
+  );
+
+  // Serve compiled frontend files (JS, CSS, etc.).
+  app.use(express.static(frontendDist));
+
+  // Serve React for client-side routes.
+  // Never return the frontend for unknown API endpoints.
+  app.get('*', (req: Request, res: Response, next: NextFunction) => {
+    if (
+      req.path === '/api' ||
+      req.path.startsWith('/api/') ||
+      extname(req.path) !== ''
+    ) {
+      next();
+      return;
+    }
+
+    res.sendFile(join(frontendDist, 'index.html'));
+  });
+}
+
 
 // Centralized error handler
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
