@@ -164,6 +164,15 @@ Create your local backend environment configuration from the safe example file:
 ```bash
 cp backend/.env.example backend/.env
 ```
+Before running the database seed, open your private
+`backend/.env` file and configure `SEED_DEMO_PASSWORD`
+with a private password of at least 12 characters.
+
+The example file intentionally does not contain a working
+demo password. Never commit or share your real value.
+
+Production uses a separate password supplied securely
+through Google Cloud Secret Manager.
 
 **Windows PowerShell:**
 ```powershell
@@ -256,9 +265,9 @@ All accounts use synthetic demonstration data with passwords securely hashed wit
 
 | Account Type | Email | Default Seed Password | Role |
 |---|---|---|---|
-| **Customer A** | `customer1@campusbite.test` | `DemoPassword123!` | `CUSTOMER` |
-| **Customer B** | `customer2@campusbite.test` | `DemoPassword123!` | `CUSTOMER` |
-| **Operator** | `operator@campusbite.test` | `DemoPassword123!` | `OPERATOR` |
+| **Customer A** | `customer1@campusbite.test` | Configured privately using SEED_DEMO_PASSWORD | `CUSTOMER` |
+| **Customer B** | `customer2@campusbite.test` | Configured privately using SEED_DEMO_PASSWORD | `CUSTOMER` |
+| **Operator** | `operator@campusbite.test` | Configured privately using SEED_DEMO_PASSWORD | `OPERATOR` |
 
 ### Seeded Menu Items
 
