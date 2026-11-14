@@ -84,7 +84,6 @@ jobs:
           set -euo pipefail
           test -n "${SERVICE_URL:-}"
           python3 deploy/smoke_test.py "$SERVICE_URL"
-          
       - name: Verify and record deployed revision
         shell: bash
         run: |
