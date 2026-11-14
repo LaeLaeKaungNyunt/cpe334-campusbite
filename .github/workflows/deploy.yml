@@ -101,17 +101,56 @@ jobs:
             --region="$REGION" \
             --format='value(spec.containers[0].image)')"
 
-          test "$REVISION_IMAGE" = "$DEPLOYED_IMAGE"
+          test -n "$REVISION_IMAGE"
+          test -n "${DEPLOYED_IMAGE:-}"
+
+          echo "Release image: $DEPLOYED_IMAGE"
+          echo "Cloud Run image: $REVISION_IMAGE"
+
+          if [[ "$REVISION_IMAGE" == "$DEPLOYED_IMAGE" ]]; then
+            echo "PASS: Direct image digest matches."
+          else
+            echo "Checking OCI image index for linux/amd64..."
+
+            MANIFEST_JSON="$(docker buildx imagetools inspect \
+              --raw "$DEPLOYED_IMAGE")"
+
+            AMD64_DIGEST="$(printf '%s\n' "$MANIFEST_JSON" | jq -er '
+              [.manifests[]? |
+                select(.platform.os == "linux" and
+                       .platform.architecture == "amd64") |
+                .digest]
+              | if length == 1 then .[0]
+                else error("Expected exactly one linux/amd64 manifest")
+                end
+            ')"
+
+            [[ "$AMD64_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]
+
+            EXPECTED_IMAGE="${DEPLOYED_IMAGE%@*}@${AMD64_DIGEST}"
+
+            if [[ "$REVISION_IMAGE" != "$EXPECTED_IMAGE" ]]; then
+              echo "::error::Cloud Run image does not match the release manifest."
+              echo "Expected: $EXPECTED_IMAGE"
+              echo "Actual:   $REVISION_IMAGE"
+              exit 1
+            fi
+
+            echo "PASS: Cloud Run image matches the linux/amd64 release manifest."
+          fi
 
           echo "Release commit: $IMAGE_TAG"
           echo "Cloud Run revision: $REVISION"
           echo "Service URL: $SERVICE_URL"
-          echo "Deployed image: $DEPLOYED_IMAGE"
+          echo "Deployed image index: $DEPLOYED_IMAGE"
+          echo "Running image: $REVISION_IMAGE"
 
           {
             echo "### CampusBite deployment"
             echo "- Commit: $IMAGE_TAG"
             echo "- Revision: $REVISION"
-            echo "- Image: $DEPLOYED_IMAGE"
+            echo "- Release image: $DEPLOYED_IMAGE"
+            echo "- Running image: $REVISION_IMAGE"
+            echo "- Verification: PASS"
             echo "- URL: $SERVICE_URL"
           } >> "$GITHUB_STEP_SUMMARY"
