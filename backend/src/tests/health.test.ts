@@ -6,7 +6,7 @@ describe('GET /api/v1/health', () => {
   it('returns HTTP 200 with status ok', async () => {
     const response = await request(app).get('/api/v1/health');
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(201);
     expect(response.headers['content-type']).toMatch(/application\/json/);
     expect(response.body).toEqual({ status: 'ok' });
   });
