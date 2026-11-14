@@ -309,8 +309,9 @@ function HomePage() {
                 <strong>Operator:</strong> <code>operator@campusbite.test</code>
               </p>
               <p>
-                <strong>Password:</strong> <code>DemoPassword123!</code>
-              </p>
+  Demo account passwords are provided privately
+  to authorized testers.
+</p>
             </div>
           </section>
         ) : (

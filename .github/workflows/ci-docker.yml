@@ -1,0 +1,103 @@
+
+name: CI & Docker Build
+
+on:
+  workflow_call:
+  pull_request:
+    branches:
+      - sprint-1-staging
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-docker:
+    name: test-and-docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: campusbite
+          POSTGRES_PASSWORD: campusbite_test_pw
+          POSTGRES_DB: campusbite_test
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -U campusbite -d campusbite_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://campusbite:campusbite_test_pw@localhost:5434/campusbite_test?schema=public
+      TEST_DATABASE_URL: postgresql://campusbite:campusbite_test_pw@localhost:5434/campusbite_test?schema=public
+      SEED_DEMO_PASSWORD: DemoPassword123!
+      NODE_ENV: test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply Prisma migrations
+        run: npm run db:migrate
+
+      - name: Seed temporary CI database
+        run: npm run db:seed
+
+      - name: Verify database connection
+        run: npm run db:check
+
+      - name: Run automated backend tests
+        run: npm test
+
+      - name: Build backend and frontend
+        run: npm run build
+
+      - name: Set up Python for deploy-script tests
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+
+      - name: Check deployment scripts when available
+        shell: bash
+        run: |
+          if [ -d deploy ]; then
+            bash -n deploy/deploy.sh deploy/release.sh deploy/teardown.sh
+            bash deploy/tests/test_deploy_stub.sh
+            bash deploy/tests/test_release_stub.sh
+            python3 -m unittest discover -s deploy/tests -p 'test_smoke.py'
+          else
+            echo "Deployment scripts not added yet; checks deferred."
+          fi
+
+      - name: Build production Docker image
+        run: docker build -t campusbite:ci .
+
+      - name: Verify production image contents
+        run: |
+          docker run --rm --entrypoint sh campusbite:ci -c '
+            test -f /app/backend/dist/server.js &&
+            test -f /app/frontend/dist/index.html &&
+            test ! -f /app/backend/.env &&
+            echo "PASS: Production image files verified"
+          '

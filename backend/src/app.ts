@@ -1,9 +1,12 @@
+import { fileURLToPath } from 'node:url';
+import { extname, join } from 'node:path';
 import express, { type Request, type Response, type NextFunction } from 'express';
 import { cookieParserMiddleware, authenticate } from './middleware/auth.js';
 import { authRouter } from './routes/auth.js';
 import { menuRouter } from './routes/menuRoutes.js';
 import { orderRouter } from './routes/orderRoutes.js';
 import { operatorRouter } from './routes/operatorRoutes.js';
+import { prisma } from './lib/prisma.js';
 
 export const app = express();
 
@@ -21,6 +24,22 @@ app.use(authenticate);
 app.get('/api/v1/health', (_req: Request, res: Response) => {
   res.status(200).json({ status: 'ok' });
 });
+// Public database readiness check for Cloud Run.
+// Returns 503 if PostgreSQL is unavailable.
+app.get('/api/ready', async (_req: Request, res: Response) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+
+    res.status(200).json({
+      status: 'ready',
+      db: 'connected',
+    });
+  } catch {
+    res.status(503).json({
+      status: 'not_ready',
+    });
+  }
+});
 
 // F-01: Authentication routes
 app.use('/api/v1/auth', authRouter);
@@ -33,6 +52,35 @@ app.use('/api/v1/orders', orderRouter);
 
 // F-04: Operator order management routes
 app.use('/api/v1/operator', operatorRouter);
+
+/**
+ * Serve the built React frontend in production.
+ * Development continues using Vite on port 5173.
+ */
+if (process.env.NODE_ENV === 'production') {
+  const frontendDist = fileURLToPath(
+    new URL('../../frontend/dist/', import.meta.url)
+  );
+
+  // Serve compiled frontend files (JS, CSS, etc.).
+  app.use(express.static(frontendDist));
+
+  // Serve React for client-side routes.
+  // Never return the frontend for unknown API endpoints.
+  app.get('*', (req: Request, res: Response, next: NextFunction) => {
+    if (
+      req.path === '/api' ||
+      req.path.startsWith('/api/') ||
+      extname(req.path) !== ''
+    ) {
+      next();
+      return;
+    }
+
+    res.sendFile(join(frontendDist, 'index.html'));
+  });
+}
+
 
 // Centralized error handler
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
