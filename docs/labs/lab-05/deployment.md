@@ -12,23 +12,23 @@ This Lab 5 deployment uses the accepted Sprint 1 application and focuses on Dock
 
 **Deployed region:** `asia-southeast1` (Singapore)
 
-**Deployment status:** Episodes 1–6 completed (cloud readiness, Docker packaging, CI quality gate, initial Cloud Run deployment, and live smoke tests verified). The Episode 7 automatic continuous deployment pipeline (`.github/workflows/deploy.yml`) is completed and verified end-to-end (Cloud Run revision `campusbite-00003-vqm` serving 100% traffic, all 51 tests passing, `/api/ready` returning HTTP 200 with database connected). The visible frontend release proof (R2) is prepared on `feature/lab5-release-proof` and remains pending until deployed. Episode 8 (persistence and rollback verification) is pending.
+**Deployment status:** Episodes 1–8 completed. Episode 7 automated continuous deployment and visible R2 release proof verified. Episode 8 persistence across application redeployment, safe manual rollback (reverting to previous release image `ed4bc61` without migration/seed via Cloud Run revision `campusbite-00006-nk9`, with CI skipped and image verification passing), and roll-forward recovery (restoring latest release `1400faa` with R2 banner via revision `campusbite-00007-jwv`) are fully completed and verified, with customer order data surviving redeployment and restoration intact.
 
 ## 2. Technology Stack
 
 | Component | Technology | Status |
 |---|---|---|
-| Frontend | React, TypeScript, Vite | Production build via Vite |
+| Frontend | React, TypeScript, Vite | Production build via Vite (R2 release banner verified) |
 | Backend | Node.js 24, Express, TypeScript | Multi-workspace build with Prisma client |
 | ORM | Prisma | PostgreSQL schema and migrations |
-| Database | PostgreSQL 16 | Local Docker Compose and Cloud SQL |
+| Database | PostgreSQL 16 | Local Docker Compose and Cloud SQL (`campusbite-pg`) |
 | Tests | Vitest and Supertest | 51 automated backend acceptance tests |
 | Deploy Tests | Python 3.14 (unittest), Bash stubs | Verification for deployment scripts |
 | Containerization | Docker | Multi-stage Node.js 24 Debian Bookworm-slim (Episode 3) |
-| Cloud hosting | Google Cloud Run | Unified container service `campusbite` (initial deployment completed) |
-| Managed database | Google Cloud SQL | PostgreSQL 16 instance `campusbite-pg` |
+| Cloud hosting | Google Cloud Run | Unified container service `campusbite` (revisions verified) |
+| Managed database | Google Cloud SQL | PostgreSQL 16 instance `campusbite-pg` (data persistence verified) |
 | CI | GitHub Actions | Automated checks on PRs (`ci-docker.yml`, branch gate verified) |
-| CD / Automated Release | GitHub Actions & Bash | Routine releases via `.github/workflows/deploy.yml` and `deploy/release.sh` (verified end-to-end) |
+| CD / Automated Release & Rollback | GitHub Actions & Bash | Routine releases & manual rollback/recovery via `.github/workflows/deploy.yml` and `deploy/release.sh` (Episode 7 & 8 verified) |
 
 The production architecture packages the frontend static assets and backend Express API into a single unified container on Cloud Run, with PostgreSQL hosted separately in Cloud SQL. The frontend communicates with the backend via relative `/api` requests.
 
@@ -94,7 +94,28 @@ The database seed preserves existing users and menu-item records when rerun. In 
 
 Database schema migrations (`prisma migrate deploy`) and optional seeding are executed via a dedicated Cloud Run Job (`campusbite-migrate`) prior to updating the live service container, ensuring schema compatibility before new code receives traffic.
 
-Cloud SQL persistence across application restart and redeployment will be verified in Episode 8.
+### Episode 8 Persistence Baseline & Verification
+
+Data persistence was verified against Google Cloud SQL (`campusbite-pg`) across application redeployment, rollback, and roll-forward recovery:
+
+**Customer Order Persistence Baseline:**
+- **Order ID:** `7d08127f-5c5b-44ba-b885-e82aa46c3b54`
+- **Customer:** Seeded authenticated customer (`customer1@campusbite.test`)
+- **Ordered Item:** Chicken Sandwich × 1
+- **Order Total:** THB 85
+- **Order Status:** `PENDING`
+- **Payment Status:** `UNPAID`
+
+**Verification Across Application Lifecycle:**
+1. **Before Redeployment:** The order was created via the live frontend while R2 revision `campusbite-00004-4dj` was active.
+2. **After Automatic Redeployment (PR #34):** After merging the rollback workflow (PR #34), automatic deployment created revision `campusbite-00005-vtt`. The order and its status remained fully intact and queryable in PostgreSQL.
+3. **During Rollback (Run #5):** Rolling back to release `ed4bc6118e724a887cb49efacff0c84dd3efab67` deployed revision `campusbite-00006-nk9`, safely bypassing migrations and seeding so the database state was preserved.
+4. **After Restoration (Run #6):** Rolling forward to latest `main` (commit `1400faa...`, revision `campusbite-00007-jwv`) confirmed that the original Chicken Sandwich order remained completely unchanged.
+
+**Evidence Accuracy Notes:**
+- Photographs specifically document the Chicken Sandwich order at three verified points: before redeployment, after redeployment (revision `campusbite-00005-vtt`), and after restoration (revision `campusbite-00007-jwv`).
+- No separate screenshot has been confirmed showing the order while revision `campusbite-00006-nk9` was active.
+- Verification confirmed data persistence across application redeployment and Cloud Run revision switches; no standalone manual application restart test was conducted.
 
 ## 6. Deployed GCP Resources
 
@@ -138,12 +159,30 @@ The team enforces a strict two-person review and deployment procedure:
    - **PR #29:** Reviewed corrective release merged into `main`. The corrected GitHub Actions workflow completed with green status across all steps, with all 51 automated backend tests passing.
    - **Live Cloud Run Status:** Deployed revision `campusbite-00003-vqm` successfully received 100% of traffic, and the live `/api/ready` health endpoint returned HTTP 200 with `{"db":"connected"}`.
 
-9. **Release Proof (R2 Pending Deployment):**
+9. **Release Proof (R2 Verified):**
    - The initial release (R1) established the baseline Cloud Run service.
-   - The second release (R2) introduces a visible release verification banner in the frontend footer:
+   - The second release (R2) introduced a visible release verification banner in the frontend footer:
      `<p>CampusBite Lab 5 — Automated Release Verification: R2</p>`.
-   - The application change is implemented and verified locally on `feature/lab5-release-proof`.
-   - Live R2 release deployment remains pending until this PR is submitted, reviewed, merged into `sprint-1-staging`, and released to `main`.
+   - The release proof was merged via PR #30 into `sprint-1-staging` and deployed to `main` via PR #31, successfully verifying automated continuous deployment without manual intervention.
+
+10. **Rollback and Recovery Verification (Episode 8 Verified):**
+   - **Rollback Workflow Implementation (PR #33 & PR #34):**
+     - PR #33 added manual `workflow_dispatch` support to `.github/workflows/deploy.yml` with an optional `image_tag` input (40-character lowercase hexadecimal SHA), conditional CI execution, and safe `needs.ci` dependency handling.
+     - PR #34 reviewed and merged the rollback workflow into `main`. The post-merge automatic deployment passed all 51 automated tests and deployed revision `campusbite-00005-vtt` with 100% traffic. Baseline customer order `7d08127f-5c5b-44ba-b885-e82aa46c3b54` survived this redeployment.
+   - **Rollback Execution (GitHub Actions Run #5):**
+     - **Trigger:** Manual `workflow_dispatch` on `main` with `image_tag: ed4bc6118e724a887cb49efacff0c84dd3efab67` (pre-R2 release commit from PR #29).
+     - **Mode:** Rollback.
+     - **CI Job:** Intentionally skipped (`needs.ci.result == 'skipped'`); existing Artifact Registry image reused without rebuilding.
+     - **Database Migration:** Bypassed (`ROLLBACK=true` passed to `deploy/release.sh`, skipping migration job execution and seeding).
+     - **Deployed Revision:** `campusbite-00006-nk9` received 100% traffic.
+     - **Verification:** Deployment image verification reported `PASS`, and live smoke tests confirmed service health. (No photograph or direct visual observation of the R1 footer during rollback was confirmed; this step was verified via Cloud Run revision deployment, image digest matching, and automated smoke test execution).
+   - **Recovery Roll-Forward Execution (GitHub Actions Run #6):**
+     - **Trigger:** Manual `workflow_dispatch` on `main` leaving `image_tag` empty.
+     - **Mode:** Release (re-deploying latest `main`, commit begins `1400faa`).
+     - **CI Job:** Executed full verification; all 51 backend tests passed.
+     - **Build & Migration:** Built and pushed the release image, executed database migration job with `--wait`.
+     - **Deployed Revision:** `campusbite-00007-jwv` received 100% traffic.
+     - **Verification:** Deployment image verification reported `PASS`, live `/api/ready` endpoint returned HTTP 200 with `{"db":"connected"}`, the R2 footer banner was visible again on the live frontend, and the original Chicken Sandwich order remained completely unchanged after restoration (confirmed by photograph).
 
 ## 8. Cost Control
 
@@ -173,13 +212,16 @@ Cost-control measures in effect:
 | Initial Cloud Run deployment | Completed | Deployed baseline service on Cloud Run via `deploy/deploy.sh` |
 | Live smoke tests | Completed | Successful execution against live Cloud Run URL (`deploy/smoke_test.py`) |
 | Automatic GitHub Actions deployment | Completed / Verified | PR #27 merged, manifest verification fixed in PR #28, corrective PR #29 merged; 51 tests passed, revision `campusbite-00003-vqm` serving 100% traffic, `/api/ready` HTTP 200 db connected |
-| Automatic release proof (R2) | Pending | R2 footer banner implemented on `feature/lab5-release-proof`; deployment pending merge to staging and main |
-| Cloud persistence and rollback | Pending Episode 8 | Scheduled for post-release verification |
+| Automatic release proof (R2) | Completed / Verified | Merged in PR #31; R2 footer banner verified live on Cloud Run |
+| Rollback workflow implementation | Completed / Verified | PR #33 merged via PR #34; manual dispatch with SHA validation, conditional CI skip, and migration bypass |
+| Data persistence across redeployment | Completed / Verified | Order `7d08127f-5c5b-44ba-b885-e82aa46c3b54` (Chicken Sandwich × 1, THB 85) photographed before redeployment, after redeployment (`campusbite-00005-vtt`), and after restoration (`campusbite-00007-jwv`) |
+| Safe manual rollback | Completed / Verified | Actions Run #5 deployed previous release `ed4bc61` to revision `campusbite-00006-nk9`; CI skipped, image verification passed, migrations bypassed |
+| Recovery roll-forward | Completed / Verified | Actions Run #6 restored latest main (`1400faa`, revision `campusbite-00007-jwv`); 51 tests passed, 100% traffic routed, live R2 footer banner restored, order persisted unchanged |
 
 ## 10. Team Responsibilities
 
-- **67070503481 — Lae Lae Kaung Nyunt (3481):** Led GCP infrastructure, Workload Identity Federation (WIF), GitHub environment configuration, branch ruleset, initial cloud deployment, R2 application change, and documentation.
-- **67070503484 — Naing Zay Linn (3484):** Led CI workflow development, the failing-PR gate demonstration (PR #24), and Episode 7 automatic deployment workflow implementation.
+- **67070503481 — Lae Lae Kaung Nyunt (3481):** Led GCP infrastructure, Workload Identity Federation (WIF), branch protection, initial deployment, R2 frontend change, Episode 8 rollback workflow implementation, Cloud Run rollback/recovery operations, documentation, and peer reviews.
+- **67070503484 — Naing Zay Linn (3484):** Led CI workflow development, failing-PR gate demonstration, Episode 7 automated deployment workflow, Episode 8 customer-order persistence testing and evidence, and peer reviews.
 
 **Reviewer and Approval Convention:**
 Both members perform testing, peer reviews, and merges of their teammate's approved PRs. All changes must be submitted via Pull Requests. The designated reviewer inspects the changes, verifies test and CI results, and merges the PR upon approval. Authors never merge their own Pull Requests.
