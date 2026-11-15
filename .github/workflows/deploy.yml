@@ -1,0 +1,156 @@
+
+name: Deploy CampusBite Demo
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: campusbite-demo-deployment
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    name: Verify release
+    uses: ./.github/workflows/ci-docker.yml
+
+  deploy:
+    name: Deploy to Google Cloud Run
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: demo
+
+    permissions:
+      contents: read
+      id-token: write
+
+    env:
+      PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      REGION: ${{ vars.GCP_REGION }}
+      IMAGE_TAG: ${{ github.sha }}
+
+    steps:
+      - name: Checkout release
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v3
+
+      - name: Validate release configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$PROJECT_ID"
+          test -n "$REGION"
+          [[ "$IMAGE_TAG" =~ ^[0-9a-f]{40}$ ]]
+          gcloud config set project "$PROJECT_ID"
+
+      - name: Authenticate Docker to Artifact Registry
+        shell: bash
+        run: |
+          gcloud auth configure-docker \
+            "${REGION}-docker.pkg.dev" --quiet
+
+      - name: Build and push release image
+        shell: bash
+        run: |
+          set -euo pipefail
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/campusbite/campusbite:${IMAGE_TAG}"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+
+      - name: Run database migration and release
+        shell: bash
+        run: |
+          bash deploy/release.sh
+
+      - name: Verify live application
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SERVICE_URL:-}"
+          python3 deploy/smoke_test.py "$SERVICE_URL"
+      - name: Verify and record deployed revision
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          REVISION="$(gcloud run services describe campusbite \
+            --project="$PROJECT_ID" \
+            --region="$REGION" \
+            --format='value(status.latestReadyRevisionName)')"
+
+          test -n "$REVISION"
+
+          REVISION_IMAGE="$(gcloud run revisions describe "$REVISION" \
+            --project="$PROJECT_ID" \
+            --region="$REGION" \
+            --format='value(spec.containers[0].image)')"
+
+          test -n "$REVISION_IMAGE"
+          test -n "${DEPLOYED_IMAGE:-}"
+
+          echo "Release image: $DEPLOYED_IMAGE"
+          echo "Cloud Run image: $REVISION_IMAGE"
+
+          if [[ "$REVISION_IMAGE" == "$DEPLOYED_IMAGE" ]]; then
+            echo "PASS: Direct image digest matches."
+          else
+            echo "Checking OCI image index for linux/amd64..."
+
+            MANIFEST_JSON="$(docker buildx imagetools inspect \
+              --raw "$DEPLOYED_IMAGE")"
+
+            AMD64_DIGEST="$(printf '%s\n' "$MANIFEST_JSON" | jq -er '
+              [.manifests[]? |
+                select(.platform.os == "linux" and
+                       .platform.architecture == "amd64") |
+                .digest]
+              | if length == 1 then .[0]
+                else error("Expected exactly one linux/amd64 manifest")
+                end
+            ')"
+
+            [[ "$AMD64_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]
+
+            EXPECTED_IMAGE="${DEPLOYED_IMAGE%@*}@${AMD64_DIGEST}"
+
+            if [[ "$REVISION_IMAGE" != "$EXPECTED_IMAGE" ]]; then
+              echo "::error::Cloud Run image does not match the release manifest."
+              echo "Expected: $EXPECTED_IMAGE"
+              echo "Actual:   $REVISION_IMAGE"
+              exit 1
+            fi
+
+            echo "PASS: Cloud Run image matches the linux/amd64 release manifest."
+          fi
+
+          echo "Release commit: $IMAGE_TAG"
+          echo "Cloud Run revision: $REVISION"
+          echo "Service URL: $SERVICE_URL"
+          echo "Deployed image index: $DEPLOYED_IMAGE"
+          echo "Running image: $REVISION_IMAGE"
+
+          {
+            echo "### CampusBite deployment"
+            echo "- Commit: $IMAGE_TAG"
+            echo "- Revision: $REVISION"
+            echo "- Release image: $DEPLOYED_IMAGE"
+            echo "- Running image: $REVISION_IMAGE"
+            echo "- Verification: PASS"
+            echo "- URL: $SERVICE_URL"
+          } >> "$GITHUB_STEP_SUMMARY"
