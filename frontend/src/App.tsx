@@ -394,6 +394,7 @@ function HomePage() {
       <footer>
         <div className="container">
           <p>CPE334 Software Engineering — Team 67070503481 (Lae Lae Kaung Nyunt) &amp; 67070503484 (Naing Zay Linn)</p>
+          <p>CampusBite Lab 5 — Automated Release Verification: R2</p>
         </div>
       </footer>
     </>
