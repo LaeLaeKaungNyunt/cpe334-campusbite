@@ -12,7 +12,7 @@ This Lab 5 deployment uses the accepted Sprint 1 application and focuses on Dock
 
 **Deployed region:** `asia-southeast1` (Singapore)
 
-**Deployment status:** Episodes 1–6 completed (cloud readiness, Docker packaging, CI quality gate, initial Cloud Run deployment, and live smoke tests verified). Episode 7 (automated continuous deployment pipeline and planned R2 release verification) is currently in progress on branch `feature/lab5-release-proof`, with automatic GitHub Actions deployment pending end-to-end verification. Episode 8 (persistence and rollback verification) is pending.
+**Deployment status:** Episodes 1–6 completed (cloud readiness, Docker packaging, CI quality gate, initial Cloud Run deployment, and live smoke tests verified). The Episode 7 automatic continuous deployment pipeline (`.github/workflows/deploy.yml`) is completed and verified end-to-end (Cloud Run revision `campusbite-00003-vqm` serving 100% traffic, all 51 tests passing, `/api/ready` returning HTTP 200 with database connected). The visible frontend release proof (R2) is prepared on `feature/lab5-release-proof` and remains pending until deployed. Episode 8 (persistence and rollback verification) is pending.
 
 ## 2. Technology Stack
 
@@ -28,7 +28,7 @@ This Lab 5 deployment uses the accepted Sprint 1 application and focuses on Dock
 | Cloud hosting | Google Cloud Run | Unified container service `campusbite` (initial deployment completed) |
 | Managed database | Google Cloud SQL | PostgreSQL 16 instance `campusbite-pg` |
 | CI | GitHub Actions | Automated checks on PRs (`ci-docker.yml`, branch gate verified) |
-| CD / Automated Release | GitHub Actions & Bash | Routine releases via `deploy/release.sh` (pending end-to-end verification) |
+| CD / Automated Release | GitHub Actions & Bash | Routine releases via `.github/workflows/deploy.yml` and `deploy/release.sh` (verified end-to-end) |
 
 The production architecture packages the frontend static assets and backend Express API into a single unified container on Cloud Run, with PostgreSQL hosted separately in Cloud SQL. The frontend communicates with the backend via relative `/api` requests.
 
@@ -124,17 +124,26 @@ The team enforces a strict two-person review and deployment procedure:
 5. **Peer Review Protocol:** Both members perform testing, peer reviews, and merges of their teammate's approved PRs. The author never merges their own PR.
 6. **Release Pull Request:** Approved changes in `sprint-1-staging` are submitted to `main` via a release PR.
 7. **Release Gate:** All automated CI checks must pass, and the reviewer approves and merges into `main`.
-8. **Automated Continuous Deployment (Pending End-to-End Verification):** Routine deployment executes `deploy/release.sh`:
-   - Validates the commit SHA and resolves the immutable `@sha256` image digest in Artifact Registry.
-   - Updates and executes Cloud Run migration job `campusbite-migrate` with `--wait`. If the migration fails, deployment stops immediately without affecting the live service.
-   - Updates Cloud Run service `campusbite` to the new image digest and restores 100% traffic via `--to-latest`.
-   - Runs automated post-deployment smoke tests (`deploy/smoke_test.py`) against the live service URL.
-9. **Planned Release Proof (Episode 7 in progress):**
+8. **Automated Continuous Deployment Pipeline (Verified):** The workflow `.github/workflows/deploy.yml` triggers on pushes to `main` and executes:
+   - Verification of the release via reusable workflow `.github/workflows/ci-docker.yml` (all 51 automated tests passing).
+   - Authentication to Google Cloud via Workload Identity Federation (WIF).
+   - Building and pushing the release image tagged by commit SHA to Artifact Registry.
+   - Executing `deploy/release.sh`, which runs database migrations via Cloud Run Job `campusbite-migrate` with `--wait`, updates Cloud Run service `campusbite`, and routes 100% of traffic to the latest revision.
+   - Running live automated smoke tests (`deploy/smoke_test.py`) against `SERVICE_URL`.
+   - Verifying and recording the deployed Cloud Run revision and platform image digest.
+
+   **Pipeline Verification and Corrective Iteration:**
+   - **PR #27:** First automatic deployment release merged to `main`. The workflow successfully built, migrated the database, deployed the Cloud Run revision, and passed live smoke tests. However, the final post-deployment verification step failed because `gcloud run revisions describe` reported the resolved platform manifest digest (`linux/amd64`) while the release script tracked the multi-arch OCI image index digest.
+   - **PR #28:** Fixed the OCI image index versus `linux/amd64` manifest verification in `.github/workflows/deploy.yml` by inspecting the OCI manifest with `docker buildx imagetools inspect` to resolve the matching platform architecture digest.
+   - **PR #29:** Reviewed corrective release merged into `main`. The corrected GitHub Actions workflow completed with green status across all steps, with all 51 automated backend tests passing.
+   - **Live Cloud Run Status:** Deployed revision `campusbite-00003-vqm` successfully received 100% of traffic, and the live `/api/ready` health endpoint returned HTTP 200 with `{"db":"connected"}`.
+
+9. **Release Proof (R2 Pending Deployment):**
    - The initial release (R1) established the baseline Cloud Run service.
-   - The planned second release (R2) introduces a visible release verification banner in the frontend footer:
+   - The second release (R2) introduces a visible release verification banner in the frontend footer:
      `<p>CampusBite Lab 5 — Automated Release Verification: R2</p>`.
-   - Automatic GitHub Actions deployment is pending end-to-end verification; upon merging the release PR into `main`, the automated workflow is designed to deploy R2 to demonstrate hands-off continuous deployment.
-   - *Note: The R2 release change is prepared on `feature/lab5-release-proof` and is currently in progress; it is not yet verified or deployed to the live environment.*
+   - The application change is implemented and verified locally on `feature/lab5-release-proof`.
+   - Live R2 release deployment remains pending until this PR is submitted, reviewed, merged into `sprint-1-staging`, and released to `main`.
 
 ## 8. Cost Control
 
@@ -163,8 +172,8 @@ Cost-control measures in effect:
 | GCP deployment scripts | Completed | Episode 5 merged (PR #21 / commit `e5801f1`, `deploy/deploy.sh`, `release.sh`) |
 | Initial Cloud Run deployment | Completed | Deployed baseline service on Cloud Run via `deploy/deploy.sh` |
 | Live smoke tests | Completed | Successful execution against live Cloud Run URL (`deploy/smoke_test.py`) |
-| Automatic GitHub Actions deployment | Pending end-to-end verification | Workflow implementation and live release execution in progress |
-| Automatic release proof (R2) | In progress | Planned R2 footer banner prepared on `feature/lab5-release-proof` |
+| Automatic GitHub Actions deployment | Completed / Verified | PR #27 merged, manifest verification fixed in PR #28, corrective PR #29 merged; 51 tests passed, revision `campusbite-00003-vqm` serving 100% traffic, `/api/ready` HTTP 200 db connected |
+| Automatic release proof (R2) | Pending | R2 footer banner implemented on `feature/lab5-release-proof`; deployment pending merge to staging and main |
 | Cloud persistence and rollback | Pending Episode 8 | Scheduled for post-release verification |
 
 ## 10. Team Responsibilities
