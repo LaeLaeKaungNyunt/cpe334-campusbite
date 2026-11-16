@@ -8,8 +8,8 @@
 - **Project:** CampusBite — Campus Food Pre-Ordering and Pickup Management System (Theme 4)
 - **Product team members:** 67070503481 — Lae Lae Kaung Nyunt (Mac); 67070503484 — Naing Zay Linn (Windows)
 - **Repository:** https://github.com/LaeLaeKaungNyunt/cpe334-campusbite
-- **Independent UAT team:** [TEAM NAME]
-- **Independent testers / student IDs:** [TESTER 1], [TESTER 2]
+- **Independent UAT team:** Team MT
+- **Independent testers / student IDs:** Moe Htet Aung (67070503482); Thu Thu Wai (67070503486)
 - **Product team contact / defect-report channel:** [AGREED CONTACT + GITHUB ISSUE/PRIVATE CHANNEL]
 
 ## 2. Baseline for this test session — MUST verify before handoff
