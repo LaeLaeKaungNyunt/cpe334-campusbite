@@ -27,6 +27,28 @@
 | UAT run date/time, time zone | [INSERT; Asia/Bangkok, UTC+07:00] |
 | CI/deploy evidence | [INSERT LINK TO VERIFIED RUN] |
 
+### Pre-UAT deployment verification — 19 November 2026
+
+- GCP Project: cpe334-campusbite-3481
+- Region: asia-southeast1
+- Cloud Run Service: campusbite
+- Serving Revision: campusbite-00007-jwv
+- Traffic: 100% to campusbite-00007-jwv
+- Associated Lab 5 Main Commit:
+  1400faa683cff2350169a86f30a25fd46a74a117
+- Container Image Digest:
+  sha256:d7d17465e1ca627f554605d9a5412a2bd942683dc8e30cbc0dc9af1b263d1516
+- Cloud SQL Instance: campusbite-pg
+- Cloud SQL State: STOPPED
+- Activation Policy: NEVER
+
+This is a pre-UAT configuration verification, not a
+completed application readiness check or UAT result.
+
+Before independent testing, restart Cloud SQL, verify
+the application's readiness endpoint, and reconfirm
+the exact serving revision and tested main commit.
+
 The Lab 5 values are *historical evidence*, not proof of the version currently serving traffic. Product Team must check GitHub `main`, Cloud Run serving revision, and `/api/ready` (expect HTTP 200, `status: ready`, `db: connected`) before sharing this document. Record any redeployment before partner testing. Acceptance will apply only to the release identified above.
 
 ## 3. Sprint 1 test scope and limitations

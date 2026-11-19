@@ -8,6 +8,19 @@
 
 For each case, independent testers must complete **Tester / Date-time UTC+07 / Version / Actual observations / Result PASS-FAIL-BLOCKED / Evidence ID**.
 
+### Browser session isolation
+
+Test Customer A, Customer B, Operator and anonymous
+access using separate browser profiles or clean
+browser sessions.
+
+Multiple private windows may share the same session.
+Do not assume two Incognito windows are isolated.
+
+Before testing unauthorized access, verify the
+active account role. After a rejected operation,
+confirm protected order data and status remain unchanged.
+
 ## UAT-CB-01 — Valid login, wrong credentials and logout
 
 - **Requirement / AC:** FR-01, AC-01, AC-02, AC-03, AC-05 (F-01).
