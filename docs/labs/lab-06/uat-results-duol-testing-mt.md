@@ -50,7 +50,7 @@
 - **Actual visible result:** Login succeeded. Borrower role, Equipment Catalog, My Requests and My Active Loans were visible; Custodian Workspace was absent. After logout and reload, Sign in appeared and protected information was hidden.
 - **Protected state remained unchanged on denial?** Not applicable; no denied operation. No borrowing state change observed.
 - **Result:** PASS
-- **Evidence:** `BB-UAT-01-A.jpg` (login succeeded); `BB-UAT-01-B.png` (Borrower role and menus). Logout/reload result is verbal confirmation. Both images were extracted from the verified member 3481 ZIP and opened successfully.
+- **Evidence:** `BB-UAT-01-A.jpg` (login succeeded); `BB-UAT-01-B.png` (Borrower role and menus). The original logout/reload action is tester-confirmed, but no dedicated screenshot of that click was captured. `BB-EX-01-A.png` and `BB-EX-02-A.png` are supplemental evidence of unauthenticated access restrictions; neither directly captures the original BB-UAT-01 logout action. The UAT-01 images were extracted from the verified member 3481 ZIP and opened successfully.
 - **Finding reported to MT:** None confirmed.
 
 ### BB-UAT-02 — Equipment availability and serviceability
@@ -176,7 +176,7 @@
 ### Additional testing — BB-EX-02: Incognito access to private REQ-A
 
 - **Duo L tester (full name, student ID):** Lae Lae Kaung Nyunt, 67070503481
-- **Date/time (+07:00):** Not recorded
+- **Date/time (+07:00):** Test execution time not recorded; screenshot capture time was November 21, 2026, 11:43:09 PM (+07:00).
 - **Product name, URL, commit and deployed version:** BorrowBase; deployed URL above; owner-reported baseline/revision as recorded in Section 1; image association and session release confirmation remain pending.
 - **Supplied requirement/AC and exact expected result:** FR-01; BR-06; AC-F01-04. A fresh unauthenticated browser session opening a private request URL must show Sign in without exposing the request.
 - **Synthetic input/account role:** Private URL for A's REQ-A `cce4aa1b-7861-4468-b8b7-5fd71926ce19`; no URL or session data reproduced.
@@ -185,7 +185,7 @@
 - **Actual visible result:** Sign in screen appeared; request details were not exposed.
 - **Protected state remained unchanged on denial?** Yes; no request data was exposed and no state-changing action was taken.
 - **Result:** PASS
-- **Evidence:** `BB-EX-02-A.png` shows the Sign in screen for the fresh Incognito request; it was extracted from the verified member 3481 ZIP and opened successfully.
+- **Evidence:** `BB-EX-02-A.png` shows the Sign in screen for the fresh Incognito request. Its original filename was `Screenshot 2569-11-21 at 11.43.09 PM.png`; capture time was November 21, 2026, 11:43:09 PM (+07:00). This is the screenshot capture time, not a verified test execution time. The image was extracted from the verified member 3481 ZIP and opened successfully.
 - **Finding reported to MT:** None confirmed.
 
 ### Additional testing — BB-EX-03: Invalid request UUID
