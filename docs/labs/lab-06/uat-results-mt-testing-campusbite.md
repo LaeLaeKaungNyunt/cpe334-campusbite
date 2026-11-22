@@ -1,6 +1,6 @@
 # CPE334 Lab 6 — Independent UAT Results: Team MT Tests CampusBite
 
-**Status:** NOT EXECUTED — preparation worksheet. No PASS, FAIL, BLOCKED, or acceptance decision is claimed yet.  
+**Status:** PRELIMINARY PARTNER REPORT — Team MT reports CB-01–CB-08 as 8/8 PASS with no defects. This status is partner-reported, not independently verified evidence. The detailed PDF, case-by-case observations, exact tested release and formal independent acceptance remain outstanding. Lab 6 deadline: November 29, 2026.
 **Product Team:** Duo L — Lae Lae Kaung Nyunt (67070503481), Naing Zay Linn (67070503484).  
 **Independent UAT Team:** MT — Moe Htet Aung (67070503482), Thu Thu Wai (67070503486).  
 **Product:** CampusBite, Sprint 1 only: F-01 authentication; F-02 menu; F-03 customer orders; F-04 operator acceptance.  
@@ -12,30 +12,30 @@
 
 | Field | Recorded value |
 |---|---|
-| Main/Sprint 1 release commit | `1400faa683cff2350169a86f30a25fd46a74a117` (from Lab 5; re-verify at handoff) |
-| Cloud Run serving revision | `campusbite-00007-jwv` (read-only status check on 19 Nov 2026; re-verify when testing begins) |
-| Revision image digest | `sha256:d7d17465e1ca627f554605d9a5412a2bd942683dc8e30cbc0dc9af1b263d1516` |
-| Actual tested commit and revision | [Record at session start; do not infer from staging commit] |
-| UAT start and end (+07:00) | [Actual dates/times] |
-| Test environment readiness | [Cloud SQL RUNNABLE, /api/ready response, screenshot/evidence IDs] |
+| Main/Sprint 1 release commit | Previously recorded Lab 5 commit: `1400faa683cff2350169a86f30a25fd46a74a117`; not confirmed as the release tested by MT. |
+| Cloud Run serving revision | Previously observed read-only on November 19, 2026: `campusbite-00007-jwv`; not confirmed as the revision tested by MT. |
+| Revision image digest | Previously observed digest: `sha256:d7d17465e1ca627f554605d9a5412a2bd942683dc8e30cbc0dc9af1b263d1516`; association with MT's test run is unverified. |
+| Actual tested commit and revision | Pending MT confirmation; do not infer from the staging commit or earlier read-only observations. |
+| UAT start and end (+07:00) | Exact session dates/times not supplied by MT; no times inferred. |
+| Test environment readiness | MT reports all eight cases executed; detailed PDF and case-level environment/evidence records are outstanding. |
 | Contact channel for findings | [Agreed private channel / GitHub Issue URL] |
 | Credentials | Provided through private channel only; never add them here |
 | Data reset / fixture agreement | [Record whether existing stock is sufficient and any safe setup] |
 
 **Release freeze:** Product Team must notify Team MT before a deployment or test-data change. Do not combine results from different revisions into one unexplained acceptance record.
 
-## 2. Planned case division — not evidence of execution
+## 2. Case allocation and preliminary partner-reported results
 
 | Case | Scope / expected check | Planned independent tester | AC reference | Actual tester | Actual time (+07:00) | Actual tested revision | Result (PASS / FAIL / BLOCKED) | Evidence ID / issue link |
 |---|---|---|---|---|---|---|---|---|
-| UAT-CB-01 | Valid/invalid login and logout | 3482 | AC-01–03, AC-05 | | | | | |
-| UAT-CB-02 | Menu, prices, sold-out/inactive | 3482 | AC-06–08 | | | | | |
-| UAT-CB-03 | Multi-item order and server total | 3482 | AC-09–10 | | | | | |
-| UAT-CB-04 | Invalid cart, stock protection | 3482 | AC-10–11 | | | | | |
-| UAT-CB-05 | Own history and saved state | 3486 | AC-13 | | | | | |
-| UAT-CB-06 | Anonymous/other-customer denial | 3486 | AC-03, AC-14 | | | | | |
-| UAT-CB-07 | Customer/operator authorization | 3486 | AC-04, AC-18 | | | | | |
-| UAT-CB-08 | Accept once, persist status | 3486 | AC-15–17, AC-19 | | | | | |
+| UAT-CB-01 | Valid/invalid login and logout | 3482 | AC-01–03, AC-05 | | | | PASS (partner-reported; evidence pending) | |
+| UAT-CB-02 | Menu, prices, sold-out/inactive | 3482 | AC-06–08 | | | | PASS (partner-reported; evidence pending) | |
+| UAT-CB-03 | Multi-item order and server total | 3482 | AC-09–10 | | | | PASS (partner-reported; evidence pending) | |
+| UAT-CB-04 | Invalid cart, stock protection | 3482 | AC-10–11 | | | | PASS (partner-reported; evidence pending) | |
+| UAT-CB-05 | Own history and saved state | 3486 | AC-13 | | | | PASS (partner-reported; evidence pending) | |
+| UAT-CB-06 | Anonymous/other-customer denial | 3486 | AC-03, AC-14 | | | | PASS (partner-reported; evidence pending) | |
+| UAT-CB-07 | Customer/operator authorization | 3486 | AC-04, AC-18 | | | | PASS (partner-reported; evidence pending) | |
+| UAT-CB-08 | Accept once, persist status | 3486 | AC-15–17, AC-19 | | | | PASS (partner-reported; evidence pending) | |
 
 **Required ordering:** CB-03 creates the `TEST_ORDER_ID`; CB-05, CB-06, CB-07 and CB-08 reuse it. CB-08 runs *after* the negative authorization checks because acceptance changes its state. Transfer the order ID privately between testers. Preserve the actual stock and order-count baselines for each case.
 
@@ -76,7 +76,7 @@ If a check is not performed, document the reason and remaining coverage gap. Dev
 
 ## 6. Incoming findings from Team MT
 
-All actual findings must be reproduced/triaged by Duo L in `defect-register.md`. Link corresponding GitHub issues and retest results here. **No findings have been received or confirmed in this worksheet.**
+Team MT's preliminary summary reports no defects across CB-01–CB-08. No incoming finding with case-level reproduction/evidence has been received or independently confirmed by Duo L. This does not substitute for MT's detailed PDF or case-by-case observations. If an actual finding is later received, Duo L will reproduce/triage it in `defect-register.md` and link the issue and retest evidence here.
 
 ## 7. Independent retest after any correction
 
@@ -86,11 +86,11 @@ All actual findings must be reproduced/triaged by Duo L in `defect-register.md`.
 
 ## 8. Final CampusBite Sprint 1 acceptance — Team MT ONLY
 
-- **Decision:** [Accepted / Accepted with expressly documented minor limitations / Not Accepted]
-- **Reason and conditions:** [State actual outcome; unresolved major/critical or required BLOCKED tests mean Not Accepted]
-- **Accepted release commit and deployed revision:** [Exact actual tested version]
-- **Independent tester names and IDs:** [3482 and 3486 after real testing]
-- **Date/time (+07:00):** [Actual sign-off]
+- **Decision:** PENDING — MT's formal independent acceptance decision has not been supplied.
+- **Reason and conditions:** The 8/8 PASS and no-defect status are partner-reported only. Detailed PDF, case-level observations, exact tested release and formal acceptance remain outstanding.
+- **Accepted release commit and deployed revision:** Pending MT confirmation; earlier Lab 5/revision observations are not identified as the release tested for this UAT.
+- **Independent tester names and IDs:** Moe Htet Aung (67070503482), Thu Thu Wai (67070503486); individual case executor mapping is pending MT's detailed report.
+- **Date/time (+07:00):** Pending; no formal sign-off recorded. Lab 6 deadline is November 29, 2026.
 - **Evidence and closure/known-limitation links:** [Actual IDs and pages]
 - **Where recorded (e.g., signed PDF, PR comment, course channel):** [Link or embedded screenshot]
 
