@@ -1,13 +1,13 @@
 # CPE334 Lab 6 — Duo L Defect Register, Triage and Resolution Trace
 
-**Status:** PRELIMINARY EXECUTION STATUS — Team MT reports CampusBite CB-01–CB-08 as 8/8 PASS with no defects; Duo L reports BorrowBase BB-UAT-01–08 as 7 PASS and 1 BLOCKED, plus BB-EX-01–04 as PASS. No genuine incoming or outgoing defect is confirmed. Detailed MT evidence and formal acceptance remain outstanding. Updated Lab 6 deadline: November 29, 2026.
+**Status:** RECONCILED PARTNER AND INDEPENDENT UAT — Team MT's published CampusBite report records 12/12 PASS and zero confirmed defects; formal MT acceptance remains PENDING. Duo L's BorrowBase BB-UAT-01–08 are 8/8 PASS after additional BB-UAT-06 verification; BB-EX-01–04 are PASS. No genuine incoming or outgoing defect is confirmed. BorrowBase acceptance remains PENDING. Updated Lab 6 deadline: November 29, 2026.
 **Duo L (CampusBite Product Team and MT independent UAT Team):** 3481 Lae Lae Kaung Nyunt; 3484 Naing Zay Linn.  
 **Partner:** Team MT — 3482 Moe Htet Aung; 3486 Thu Thu Wai.  
 **Purpose:** Keep incoming CampusBite findings separate from outgoing MT findings. Record every genuine report, even if the result is duplicate, not-defect or enhancement.
 
 ## 1. Incoming findings — MT reports against CampusBite
 
-**Present state:** Team MT reports that it independently executed CampusBite cases CB-01–CB-08 with 8/8 PASS and no defects. This is partner-reported status, not independently verified case evidence. The detailed PDF, case-by-case observations, exact tested release and formal independent acceptance remain outstanding. Duo L has no confirmed incoming finding to record at this time; the findings table remains empty.
+**Present state:** Team MT's published CampusBite UAT report records 12/12 PASS (eight original and four additional cases) and zero confirmed defects. This remains partner-reported, not Duo L's independently verified case evidence. MT reports R1 commit `1400faa683cff2350169a86f30a25fd46a74a117` and Cloud Run revision `campusbite-00007-jwv`; the report says their deployment association was not independently confirmed. The evidence is referenced by IDs in MT's report/PDF and has not been independently reviewed here. UAT-CB-04's forged-total input returned HTTP 400, but its screenshot did not show the exact `INVALID_ORDER` code; this is a limitation, not a confirmed defect. MT's formal independent acceptance remains PENDING. Duo L has no confirmed incoming finding; the findings table remains empty.
 
 | Finding ID / Issue URL | Reporter (MT tester) | CampusBite case/AC | Tested commit/revision | Actual vs expected (brief) | Impact-based severity | Triage classification + reason | Assigned Duo L owner | Fix / disposition status | MT retest / closure evidence |
 |---|---|---|---|---|---|---|---|---|---|
@@ -17,7 +17,9 @@
 
 ## 2. Outgoing findings — Duo L reports against Team MT's product
 
-**Present state:** Duo L completed BorrowBase UAT on November 21, 2026: BB-UAT-01–08 resulted in 7 PASS and 1 BLOCKED; BB-EX-01–04 were recorded PASS. BB-UAT-06 remains BLOCKED because HTTP 403 and unchanged state do not establish the required exact `FORBIDDEN` authorization error. This is a test limitation, not an accepted defect. No genuine outgoing defect has been confirmed. BorrowBase results are documented and merged through PR #40; the tested release association remains unconfirmed.
+**Present state:** Duo L's original BorrowBase BB-UAT-01–08 execution on November 21, 2026 had 7 PASS and 1 BLOCKED; BB-EX-01–04 are PASS. Member 3481 independently repeated BB-UAT-06 on November 22 using a fresh PENDING request fixture. Authenticated Borrower B sent one `POST /api/v1/custodian/borrow-requests/{requestId}/checkout` with a valid session and CSRF token; response was HTTP 403, `error.code` `FORBIDDEN`, message “You do not have permission for this operation.” The request remained PENDING, asset AVAILABLE, and the same three active loans remained. This additional verification resolves the BLOCKED classification without a code fix: original-case status is now 8/8 PASS after verification. No genuine outgoing defect is confirmed. BorrowBase results are documented and merged through PR #40; the owner-reported source baseline/revision remain `6a0e29154c2b2165c486b0bc8d18e3fd2475b2fc` / `borrowbase-00007-jck`, with image-to-commit and session release association unverified.
+
+**BB-UAT-06 verification evidence:** `BB-UAT-06-R2-BEFORE-REQUEST.png`, `BB-UAT-06-R2-BEFORE-LOANS.png`, `BB-UAT-06-R2-RESPONSE.png`, `BB-UAT-06-R2-AFTER-REQUEST.png`, and `BB-UAT-06-R2-AFTER-LOANS.png`. The November 21 response screenshot `BB-UAT-06-C.png` remains the original BLOCKED-run evidence; it did not show the exact code. No defect issue or code correction is recorded for this resolved verification gap.
 
 | Finding ID / MT Issue URL | Duo L reporter (3481/3484) | MT case/requirement | Tested MT version | Actual vs expected (brief) | Severity + user impact | Evidence IDs | Date reported / method | MT disposition & issue/PR link | Duo L retest outcome |
 |---|---|---|---|---|---|---|---|---|---|
@@ -73,8 +75,8 @@ Required exercise sequence: MT independently discovers and reports the defect; D
 
 | Product | Independent deciding team | Exact release accepted/tested | All required cases executed? | Critical/Major resolved and independently retested? | Minor limitations explicitly accepted? | Final decision | Actual sign-off date/time and evidence |
 |---|---|---|---|---|---|---|---|
-| CampusBite | Team MT | Exact tested release pending MT confirmation | Partner-reported 8/8 PASS; detailed evidence pending | No confirmed defects | Pending formal decision | PENDING | Formal acceptance not supplied; deadline November 29, 2026 |
-| Team MT product | Duo L | BorrowBase release association pending confirmation | 7 PASS, 1 BLOCKED; four additional tests PASS | No confirmed defects; BB-UAT-06 remains BLOCKED | Pending final decision | PENDING | Acceptance not established; results merged through PR #40 |
+| CampusBite | Team MT | R1 commit and revision are partner-reported; deployment association unverified | Partner-reported 12/12 PASS; evidence IDs reported, not independently reviewed | Zero confirmed defects reported | Pending formal decision | PENDING | Formal acceptance not supplied; deadline November 29, 2026; UAT-CB-04 forged-total error code not visible |
+| Team MT product | Duo L | BorrowBase owner-reported baseline/revision; image association and session release confirmation pending | 8/8 original cases PASS after BB-UAT-06 additional verification; four additional tests PASS | No genuine defects confirmed; BB-UAT-06 resolved by verification, not code fix | Pending final decision | PENDING | Acceptance not established; results merged through PR #40; BB-EX-03 follow-up image filename remains unverified |
 
 **Decision options:** Accepted; Accepted with explicitly documented minor limitations; Not Accepted. Unresolved critical/major or required BLOCKED testing prevents a supported acceptance sign-off.
 
@@ -82,6 +84,11 @@ Required exercise sequence: MT independently discovers and reports the defect; D
 
 | Evidence ID | Event / screenshot or excerpt | Date/time (+07:00) | Tested commit / deployed revision | Actual finding/result | PDF page (after assembly) |
 |---|---|---|---|---|---|
+| BB-UAT-06-R2-BEFORE-REQUEST.png | Borrower B fixture request state before unauthorized checkout | November 22, 2026; time not recorded | Owner-reported BorrowBase baseline/revision; association unverified | Request `8d13c6b4-1ae4-4410-aa85-110cca365193` PENDING; ASSET-A AVAILABLE | |
+| BB-UAT-06-R2-BEFORE-LOANS.png | Active loans before checkout attempt | November 22, 2026; time not recorded | Owner-reported BorrowBase baseline/revision; association unverified | Three existing active loans | |
+| BB-UAT-06-R2-RESPONSE.png | Authenticated Borrower B checkout POST response | November 22, 2026; time not recorded | Owner-reported BorrowBase baseline/revision; association unverified | HTTP 403 `FORBIDDEN`; “You do not have permission for this operation.” | |
+| BB-UAT-06-R2-AFTER-REQUEST.png | Fixture request state after checkout attempt | November 22, 2026; time not recorded | Owner-reported BorrowBase baseline/revision; association unverified | Request remained PENDING; asset remained AVAILABLE | |
+| BB-UAT-06-R2-AFTER-LOANS.png | Active loans after checkout attempt | November 22, 2026; time not recorded | Owner-reported BorrowBase baseline/revision; association unverified | Same three active loans; no unauthorized checkout | |
 | [e.g., B-CB03-01] | [Describe actual capture, do not invent] | | | | |
 
 In the PDF, embed legible test steps, actual observations, issue/PR review text, RED/GREEN command output, deployment verification, and the independent acceptance record; GitHub hyperlinks alone are insufficient.

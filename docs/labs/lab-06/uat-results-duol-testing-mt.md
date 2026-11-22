@@ -1,6 +1,6 @@
 # CPE334 Lab 6 — Independent UAT Results: Duo L Tests Team MT's Product
 
-**Status:** EXECUTED — BB-UAT-06 is BLOCKED pending exact authorization-error verification; BB-EX-03 is PASS; final independent acceptance remains PENDING.
+**Status:** EXECUTED — BB-UAT-01–08 are PASS after the BB-UAT-06 follow-up verification; BB-EX-01–04 are PASS. No genuine outgoing defect is confirmed. Final independent acceptance remains PENDING.
 **Independent UAT Team:** Duo L — Lae Lae Kaung Nyunt (67070503481); Naing Zay Linn (67070503484).  
 **Product Team:** MT — Moe Htet Aung (67070503482); Thu Thu Wai (67070503486).  
 **Important:** This file documents independent tests conducted *by Duo L* on MT's BorrowBase release. It does not describe CampusBite UAT.
@@ -32,7 +32,7 @@
 | BB-UAT-03 | FR-03/04; BR-02/03/06; AC-F02-04, AC-F03-01/03/06 — Create pending request | 3481 | A; ASSET-A; save request once, record UUID/time, verify after reload and no Loan/reservation | After 02; creates REQ-A for 04/05 | Owner-reported baseline `6a0e29154c2b2165c486b0bc8d18e3fd2475b2fc`; revision `borrowbase-00007-jck` (association/release confirmation pending) | 2026-11-21; time not recorded (request event 9:12:13 PM) | PASS | BB-UAT-03-C.png; BB-UAT-03-D.png |
 | BB-UAT-04 | FR-03; BR-03; AC-F03-07; supporting TEST-F03-06 — Reject duplicate pending request | 3484 | A; ASSET-A and REQ-A; repeat once; exactly one pending original remains | After 03; REQ-A remains pending | Owner-reported baseline `6a0e29154c2b2165c486b0bc8d18e3fd2475b2fc`; revision `borrowbase-00007-jck` (association/release confirmation pending) | 2026-11-21; time not recorded | PASS | BB-UAT-04-A.png |
 | BB-UAT-05 | FR-04; BR-06; NFR-01; AC-F01-05, AC-F03-03/04 — Deny access to another borrower's record | 3484 | A's REQ-A and B's own REQ-D2 `645e6f94-cf61-4ccd-99b6-1d9650163a6a`; B opens A's detail address | After 03/04; separate A/B contexts; verify A record unchanged | Owner-reported baseline `6a0e29154c2b2165c486b0bc8d18e3fd2475b2fc`; revision `borrowbase-00007-jck` (association/release confirmation pending) | 2026-11-21; time not recorded | PASS | BB-UAT-05-A.png; BB-UAT-05-B.png; BB-UAT-05-C.png |
-| BB-UAT-06 | FR-05/06 access boundary; BR-05/06; AC-F01-05, AC-F04-02 — Borrower cannot checkout | 3481 | A attempts checkout of REQ-E `52b7588a-07a7-4e9a-bf22-8a665428caed`; expect role-denial HTTP 403 FORBIDDEN; E/request unchanged | After 05, before 07; custodian inspects before/after | Owner-reported baseline `6a0e29154c2b2165c486b0bc8d18e3fd2475b2fc`; revision `borrowbase-00007-jck` (association/release confirmation pending) | 2026-11-21; time not recorded | BLOCKED — HTTP 403 and unchanged state verified; exact JSON error code not captured, so role denial is unconfirmed | BB-UAT-06-C.png |
+| BB-UAT-06 | FR-05/06 access boundary; BR-05/06; AC-F01-05, AC-F04-02 — Borrower cannot checkout | 3481 | A attempts checkout of REQ-E `52b7588a-07a7-4e9a-bf22-8a665428caed`; expect role-denial HTTP 403 FORBIDDEN; E/request unchanged | After 05, before 07; custodian inspects before/after | Owner-reported baseline `6a0e29154c2b2165c486b0bc8d18e3fd2475b2fc`; revision `borrowbase-00007-jck` (association/release confirmation pending) | 2026-11-21; time not recorded | Original result BLOCKED on Nov 21; follow-up verification PASS on Nov 22. Case now PASS; no code fix. | Original: BB-UAT-06-C.png; follow-up: BB-UAT-06-R2-BEFORE-REQUEST.png, BB-UAT-06-R2-BEFORE-LOANS.png, BB-UAT-06-R2-RESPONSE.png, BB-UAT-06-R2-AFTER-REQUEST.png, BB-UAT-06-R2-AFTER-LOANS.png |
 | BB-UAT-07 | FR-02/04/05/06; BR-02/04/05; NFR-03; AC-F02-02, AC-F03-03/04/06, AC-F04-01/03 — Custodian checkout and persistence | 3481 | Custodian checks out A's REQ-E; verify FULFILLED, unavailable E, one active A Loan and persisted borrower views | After 06; only if REQ-E unchanged | Owner-reported baseline `6a0e29154c2b2165c486b0bc8d18e3fd2475b2fc`; revision `borrowbase-00007-jck` (association/release confirmation pending) | 2026-11-21; time not recorded (checkout event 9:59:01 PM) | PASS | BB-UAT-07-B.png; BB-UAT-07-D.png; BB-UAT-07-E.png; BB-UAT-07-F.png |
 | BB-UAT-08 | FR-03/04/05/06; BR-02/03/04/05/10; AC-F03-07, AC-F04-01/03/07 — Competing pending requests | 3484 | Custodian checks out D1 for A; verify D2 for B stays pending, unavailable, and exactly one active D Loan | After 07; use original D1/D2 fixtures | Owner-reported baseline `6a0e29154c2b2165c486b0bc8d18e3fd2475b2fc`; revision `borrowbase-00007-jck` (association/release confirmation pending) | 2026-11-21; time not recorded (checkout event 10:11:41 PM) | PASS | BB-UAT-08-A.png; BB-UAT-08-B.png; BB-UAT-08-C.png; BB-UAT-08-D.png; BB-UAT-08-G1.png; BB-UAT-08-G2.png |
 
@@ -124,9 +124,24 @@
 - **User actions taken:** Submitted the authorized negative checkout attempt as A; inspected response status and before/after state.
 - **Actual visible result:** HTTP 403 observed. Before/after verification confirmed REQ-E remained PENDING, ASSET-E remained available and no E Loan was created. The exact JSON error code was not captured; the response could not be distinguished as `FORBIDDEN` versus `ORIGIN_FORBIDDEN` or `CSRF_FORBIDDEN`.
 - **Protected state remained unchanged on denial?** Yes; before/after verification found the request and asset state unchanged and no Loan created.
-- **Result:** BLOCKED — HTTP 403 and no state mutation are verified, but the exact code is missing. Team MT's handoff requires `403 FORBIDDEN`; an Origin/CSRF rejection does not establish role-based denial. This is not recorded as PASS or FAIL.
+- **Result (original run):** BLOCKED — HTTP 403 and no state mutation were verified, but the exact code was missing. Team MT's handoff requires `403 FORBIDDEN`; an Origin/CSRF rejection does not establish role-based denial. This original November 21 result is retained as recorded; the follow-up verification below resolves the outstanding classification.
 - **Evidence:** `BB-UAT-06-C.png` was extracted from the verified member 3481 ZIP and opened successfully; it shows HTTP 403, but the exact JSON error code is not visible. The before/after state check is verified separately from this screenshot. Do not include CSRF/session data.
-- **Finding reported to MT:** None confirmed; classification remains open pending verification.
+- **Finding reported to MT:** None confirmed; the result was pending additional verification.
+
+### BB-UAT-06 — Follow-up authorization verification (R2)
+
+- **Duo L tester (full name, student ID):** Lae Lae Kaung Nyunt, 67070503481
+- **Date/time (+07:00):** November 22, 2026; execution time not recorded
+- **Product name, URL, commit and deployed version:** BorrowBase; deployed URL above; owner-reported source baseline `6a0e29154c2b2165c486b0bc8d18e3fd2475b2fc` and revision `borrowbase-00007-jck`. Image-to-commit/deployment association remains unverified.
+- **Supplied requirement/AC and exact expected result:** FR-05/06; BR-05/06; AC-F01-05 and AC-F04-02. An authenticated Borrower request to the Custodian checkout endpoint must return HTTP 403 with `error.code` `FORBIDDEN`, without changing request, asset or loan state.
+- **Synthetic input/account role:** UAT Borrower B, `uat-borrower-b@example.test`; ASSET-A `BB-LAP-UAT6-A-001`; request `8d13c6b4-1ae4-4410-aa85-110cca365193`. No password, session cookie or CSRF token recorded.
+- **Initial application/data state:** Request PENDING; asset AVAILABLE; three existing active loans.
+- **User actions taken:** Borrower B, authenticated with a valid session and CSRF token, submitted one POST request to `POST /api/v1/custodian/borrow-requests/{requestId}/checkout` for request `8d13c6b4-1ae4-4410-aa85-110cca365193`.
+- **Actual visible result:** HTTP 403; `error.code` was `FORBIDDEN`; message was “You do not have permission for this operation.”
+- **Protected state remained unchanged on denial?** Yes. The request remained PENDING, asset remained AVAILABLE and the same three active loans remained. No unauthorized checkout occurred.
+- **Result:** PASS. This follow-up verifies the required role-denial code and resolves the original BLOCKED classification by additional verification, not by a code change.
+- **Evidence:** `BB-UAT-06-R2-BEFORE-REQUEST.png`, `BB-UAT-06-R2-BEFORE-LOANS.png`, `BB-UAT-06-R2-RESPONSE.png`, `BB-UAT-06-R2-AFTER-REQUEST.png`, and `BB-UAT-06-R2-AFTER-LOANS.png` (member 3481's verified evidence filenames).
+- **Finding reported to MT:** None; no defect or code fix is reported.
 
 ### BB-UAT-07 — Custodian checkout and persistence
 
@@ -223,17 +238,17 @@
 This assessment compares the recorded manual cases with MT's [SRS](https://github.com/thu734/Inventory-and-Borrowing-System/blob/6a0e29154c2b2165c486b0bc8d18e3fd2475b2fc/docs/srs.md) and [F-01](https://github.com/thu734/Inventory-and-Borrowing-System/blob/6a0e29154c2b2165c486b0bc8d18e3fd2475b2fc/docs/sprints/sprint-1/contracts/F-01-authentication.md), [F-02](https://github.com/thu734/Inventory-and-Borrowing-System/blob/6a0e29154c2b2165c486b0bc8d18e3fd2475b2fc/docs/sprints/sprint-1/contracts/F-02-equipment-catalog.md), [F-03](https://github.com/thu734/Inventory-and-Borrowing-System/blob/6a0e29154c2b2165c486b0bc8d18e3fd2475b2fc/docs/sprints/sprint-1/contracts/F-03-borrowing-requests.md) and [F-04](https://github.com/thu734/Inventory-and-Borrowing-System/blob/6a0e29154c2b2165c486b0bc8d18e3fd2475b2fc/docs/sprints/sprint-1/contracts/F-04-custodian-checkout.md) contracts at the owner-reported baseline. These are independent UAT gaps, not claims about MT's separate automated checks.
 
 - **Authentication inputs (FR-01/F-01):** Invalid login inputs, malformed or missing fields, unknown/inactive accounts, wrong passwords and rate-limit behavior were not exercised; BB-UAT-01 records a successful login only.
-- **Server-side authorization (BR-05/06, NFR-01; F-01/F-04):** BB-UAT-06 remains BLOCKED because its HTTP 403 code is unknown. Unauthenticated and inactive/revoked-session access across Custodian list, detail and checkout routes was not independently tested. The EX-04 UI check does not test server authorization.
+- **Server-side authorization (BR-05/06, NFR-01; F-01/F-04):** The Borrower-to-Custodian checkout denial was verified as `403 FORBIDDEN` in BB-UAT-06 R2. Unauthenticated and inactive/revoked-session access across Custodian list, detail and checkout routes was not independently tested. The EX-04 UI check does not test server authorization.
 - **API and transaction boundaries (F-02/F-03/F-04; NFR-08):** Invalid or forged request/asset inputs, Origin/CSRF error paths, API-level repeat checkout, concurrent checkout conflicts and rollback/no-partial-write behavior were not covered by these manual UAT cases. EX-04 checks only the normal Custodian UI.
 - **UI states and accessibility (NFR-06; AC-F02-06, AC-F03-08, AC-F04-09):** Comprehensive loading, empty, error/recovery, keyboard/focus and responsive-layout checks remain unexecuted.
 
 ## 4. Outgoing defects we reported to Team MT
 
-No genuine outgoing defect is confirmed from the tests recorded so far. BB-UAT-06 is BLOCKED: HTTP 403 and no state mutation are verified, but the missing exact code prevents confirmation of role-based denial under MT's handoff. BB-EX-03 passed based on the confirmed before/after behavior; its follow-up screenshot remains to be copied and verified. No defect issue or fix is claimed.
+No genuine outgoing defect is confirmed. The original BB-UAT-06 run on November 21 was BLOCKED because the HTTP 403 response did not show its exact code. Member 3481's separate November 22 verification observed HTTP 403 `FORBIDDEN` and unchanged state on a fresh PENDING fixture; the case is now PASS and the classification is resolved by additional verification, not a code fix. No defect issue or code change is claimed. BB-EX-03 remains PASS based on the confirmed before/after behavior; its follow-up screenshot filename/extension is still unverified.
 
 ## 5. Independent retest of MT's corrected release
 
-Independent defect retesting is **NOT EXECUTED**. No correction or retest is claimed.
+Independent retesting of a corrected release is **NOT EXECUTED**; no code correction was made or retested. The BB-UAT-06 R2 activity above is additional verification of the original observed behavior, not a fix retest.
 
 | MT issue / original case | New tested commit/revision | Duo L retester | Retest timestamp (+07) | Observed actual outcome | Result | Evidence |
 |---|---|---|---|---|---|---|
@@ -243,7 +258,7 @@ Independent defect retesting is **NOT EXECUTED**. No correction or retest is cla
 
 - **Product and Sprint 1 scope:** BorrowBase — Equipment Inventory and Borrowing System (Theme 2); Sprint 1 scope F-01 through F-04 as recorded in Section 1.
 - **Final decision:** PENDING — no acceptance decision made.
-- **Reasons / conditions / unresolved cases:** Pending evidence review; confirmation of the deployed version/release for this session; BB-UAT-06 exact authorization-error verification; and completion/review of the remaining Sprint 1 coverage gaps listed in Section 3. The BB-EX-03 follow-up screenshot also remains to be copied and its actual filename/extension verified. Current case execution and observations do not constitute approval.
+- **Reasons / conditions / unresolved cases:** Pending evidence review; confirmation of the deployed version/release for this session; and completion/review of the remaining Sprint 1 coverage gaps listed in Section 3. BB-UAT-06 is PASS after R2; this does not independently confirm the deployment association. The BB-EX-03 follow-up screenshot filename/extension also remains unverified. Current case execution and observations do not constitute approval.
 - **Exact tested MT commit/revision:** Owner-reported source baseline `6a0e29154c2b2165c486b0bc8d18e3fd2475b2fc`; owner-reported revision `borrowbase-00007-jck`; image-to-commit association and session release confirmation pending.
 - **Independent testers:** Lae Lae Kaung Nyunt (67070503481), Naing Zay Linn (67070503484), according to case assignments above.
 - **Decision date/time (+07:00):** Pending; no final decision made.
