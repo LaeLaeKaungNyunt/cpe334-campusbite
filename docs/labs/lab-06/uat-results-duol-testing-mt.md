@@ -1,6 +1,6 @@
 # CPE334 Lab 6 — Independent UAT Results: Duo L Tests Team MT's Product
 
-**Status:** EXECUTED — BB-UAT-01–08 are PASS after the BB-UAT-06 follow-up verification; BB-EX-01–04 are PASS. No genuine outgoing defect is confirmed. Final independent acceptance remains PENDING.
+**Status:** ACCEPTED — Duo L formally accepted BorrowBase Sprint 1 on November 23, 2026 (ICT), after BB-UAT-01–08 were PASS following BB-UAT-06 verification and BB-EX-01–04 were PASS. No genuine outgoing defect is confirmed.
 **Independent UAT Team:** Duo L — Lae Lae Kaung Nyunt (67070503481); Naing Zay Linn (67070503484).  
 **Product Team:** MT — Moe Htet Aung (67070503482); Thu Thu Wai (67070503486).  
 **Important:** This file documents independent tests conducted *by Duo L* on MT's BorrowBase release. It does not describe CampusBite UAT.
@@ -257,11 +257,14 @@ Independent retesting of a corrected release is **NOT EXECUTED**; no code correc
 ## 6. Final independent Sprint 1 decision for Team MT — Duo L ONLY
 
 - **Product and Sprint 1 scope:** BorrowBase — Equipment Inventory and Borrowing System (Theme 2); Sprint 1 scope F-01 through F-04 as recorded in Section 1.
-- **Final decision:** PENDING — no acceptance decision made.
-- **Reasons / conditions / unresolved cases:** Pending evidence review; confirmation of the deployed version/release for this session; and completion/review of the remaining Sprint 1 coverage gaps listed in Section 3. BB-UAT-06 is PASS after R2; this does not independently confirm the deployment association. The BB-EX-03 follow-up screenshot filename/extension also remains unverified. Current case execution and observations do not constitute approval.
+- **Final decision:** ACCEPTED — Duo L's formal independent acceptance of the BorrowBase Sprint 1 baseline.
+- **Decision communicated:** November 23, 2026 (ICT), in the joint acceptance message to Team MT; exact time not recorded.
+- **Decision scope and basis:** F-01 Authentication and Authorization, F-02 Equipment Catalog, F-03 Borrowing Requests and Own Records, and F-04 Custodian Checkout. BB-UAT-01–08: 8/8 PASS after BB-UAT-06's November 22 verification; BB-EX-01–04: 4/4 PASS; no confirmed defects and no remaining BLOCKED cases. The original November 21 BB-UAT-06 BLOCKED result and its evidence limitation are preserved above; the follow-up resolved the classification through verification, not a software correction.
+- **Evidence/version limitations:** The accepted test version remains the owner-reported source baseline `6a0e29154c2b2165c486b0bc8d18e3fd2475b2fc` and Cloud Run revision `borrowbase-00007-jck`; their image-to-commit association and deployment/session release association are unverified. The known screenshot and verbal-confirmation limitations in Sections 3 and 6 remain part of this record.
 - **Exact tested MT commit/revision:** Owner-reported source baseline `6a0e29154c2b2165c486b0bc8d18e3fd2475b2fc`; owner-reported revision `borrowbase-00007-jck`; image-to-commit association and session release confirmation pending.
 - **Independent testers:** Lae Lae Kaung Nyunt (67070503481), Naing Zay Linn (67070503484), according to case assignments above.
-- **Decision date/time (+07:00):** Pending; no final decision made.
-- **Evidence IDs and record of delivered decision:** Member 3481's 13 images from `Lab6_BorrowBase_Evidence_3481_v2.zip` are extracted to `Documents\Lab6_BorrowBase_Evidence\3481`; member 3484's 15 case-labeled screenshots are copied to `Documents\Lab6_BorrowBase_Evidence\3484`. The teammate ZIP and individual images remain outside the repository. BB-EX-03's post-attempt own-request access was confirmed by member 3484; its follow-up screenshot is not yet present and its filename/extension remain unverified. No decision delivered.
+- **Decision date/time (+07:00):** November 23, 2026; exact time not recorded.
+- **Independent testers:** Lae Lae Kaung Nyunt (67070503481) and Naing Zay Linn (67070503484); both agreed to the decision.
+- **Evidence IDs and record of delivered decision:** Member 3481's 13 images from `Lab6_BorrowBase_Evidence_3481_v2.zip` are extracted to `Documents\Lab6_BorrowBase_Evidence\3481`; member 3484's 15 case-labeled screenshots are copied to `Documents\Lab6_BorrowBase_Evidence\3484`. The teammate ZIP and individual images remain outside the repository. BB-EX-03's follow-up screenshot filename/extension remains unverified. The joint acceptance message was communicated to Team MT on November 23, 2026 (ICT); no signature or exact message time is recorded here.
 
-This is Duo L's independent decision about MT's application. MT must separately decide acceptance of CampusBite.
+This is Duo L's independent decision about MT's application. Team MT's separate CampusBite Sprint 1 acceptance is recorded in `uat-results-mt-testing-campusbite.md`.

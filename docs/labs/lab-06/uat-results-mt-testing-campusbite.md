@@ -1,6 +1,6 @@
 # CPE334 Lab 6 — Independent UAT Results: Team MT Tests CampusBite
 
-**Status:** PARTNER-REPORTED UAT RESULTS — Team MT reports UAT-CB-01–08 and MT-IUAT-01–04 as PASS, with zero confirmed defects. These are MT's reported observations and evidence references, not Duo L's own manual tests. Deployment association and formal MT independent acceptance remain unverified/pending. Lab 6 deadline: November 29, 2026.
+**Status:** ACCEPTED — Team MT formally accepted the CampusBite Sprint 1 baseline on November 23, 2026. Its UAT record reports UAT-CB-01–08 and MT-IUAT-01–04 as PASS, with zero confirmed defects. These remain MT's reported observations and evidence references, not Duo L's own manual tests. The R1 deployment association remains unverified. Lab 6 deadline: November 29, 2026.
 **Product Team:** Duo L — Lae Lae Kaung Nyunt (67070503481), Naing Zay Linn (67070503484).  
 **Independent UAT Team:** MT — Moe Htet Aung (67070503482), Thu Thu Wai (67070503486).  
 **Product:** CampusBite, Sprint 1 only: F-01 authentication; F-02 menu; F-03 customer orders; F-04 operator acceptance.  
@@ -74,12 +74,12 @@ Team MT reports zero confirmed defects across the eight original and four additi
 
 ## 8. Final CampusBite Sprint 1 acceptance — Team MT ONLY
 
-- **Decision:** PENDING — MT's formal independent acceptance decision has not been supplied.
-- **Reason and conditions:** All 12 cases are reported PASS by Team MT, with zero confirmed defects reported. Formal independent acceptance has not been supplied. The UAT-CB-04 forged-total response's exact error code remains unverified; evidence is referenced by IDs in MT's record, but the PDF was not copied into this repository.
-- **Accepted release commit and deployed revision:** Pending formal MT decision. Reported R1 values: commit `1400faa683cff2350169a86f30a25fd46a74a117`, revision `campusbite-00007-jwv`; deployment association is explicitly not independently confirmed in MT's record.
+- **Decision:** ACCEPTED — Team MT's formal independent acceptance of the CampusBite Sprint 1 baseline, communicated November 23, 2026 (ICT); exact time not recorded.
+- **Reason and scope:** Team MT reports all eight original cases and four additional cases PASS, with zero confirmed defects. The existing UAT-CB-04 forged-total response was HTTP 400, but its screenshot did not show the exact `INVALID_ORDER` error code; this limitation is retained and is not recorded as a confirmed defect.
+- **Accepted release identifiers:** MT-reported R1 commit `1400faa683cff2350169a86f30a25fd46a74a117` and Cloud Run revision `campusbite-00007-jwv`. Their deployment association remains unverified in MT's report; this acceptance record does not add deployment evidence.
 - **Independent tester names and IDs:** UAT-CB-01–04: Moe Htet Aung (67070503482); UAT-CB-05–08 and MT-IUAT-01–04: Thu Thu Wai (67070503486).
 - **Date/time (+07:00):** Original cases November 21, 2026; additional cases November 22, 2026. Exact execution times were not recorded. Lab 6 deadline is November 29, 2026.
 - **Evidence and closure/known-limitation links:** Evidence IDs are recorded in Sections 2 and 5 and refer to MT's Lab 6 PDF; no PDF or image files are added here.
-- **Where recorded (e.g., signed PDF, PR comment, course channel):** MT's source record: [campusbite-uat-results.md](https://github.com/thu734/Inventory-and-Borrowing-System/blob/lab6-staging/docs/labs/lab-06/campusbite-uat-results.md). Formal independent decision remains pending.
+- **Where recorded (e.g., signed PDF, PR comment, course channel):** Team MT's formal decision was communicated November 23, 2026 (ICT). UAT observations and evidence references remain in MT's source record: [campusbite-uat-results.md](https://github.com/thu734/Inventory-and-Borrowing-System/blob/lab6-staging/docs/labs/lab-06/campusbite-uat-results.md).
 
-**Do not complete this section on behalf of MT.** The Product Team cannot grant its own independent acceptance.
+This section records Team MT's communicated decision; it is not Duo L's acceptance. Any later change to MT's decision must come from Team MT.
