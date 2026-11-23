@@ -19,7 +19,7 @@ interface RequestedItem {
 
 function parseItems(body: unknown): RequestedItem[] | null {
   if (!isRecord(body) || Object.keys(body).some((key) => key !== 'items')) return null;
-  if (!Array.isArray(body.items)) return null;
+  if (!Array.isArray(body.items) || body.items.length === 0) return null;
 
   const parsed: RequestedItem[] = [];
   const seen = new Set<string>();
