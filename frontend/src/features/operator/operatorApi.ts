@@ -17,6 +17,7 @@ export interface OperatorOrder {
   status: 'PENDING' | 'ACCEPTED' | 'PREPARING' | 'READY' | 'COMPLETED' | 'CANCELLED';
   paymentStatus: 'UNPAID' | 'PAID_SIMULATED';
   totalSatang: number;
+  estimatedReadyAt: string | null;
   createdAt: string;
   updatedAt: string;
   customer?: {
@@ -29,8 +30,7 @@ export interface OperatorOrder {
 export interface AcceptOrderResult {
   id: string;
   status: 'ACCEPTED';
-  paymentStatus: string;
-  totalSatang: number;
+  estimatedReadyAt: string;
   updatedAt: string;
 }
 
@@ -49,13 +49,14 @@ export async function fetchOperatorOrders(signal?: AbortSignal): Promise<Operato
   return json.data;
 }
 
-export async function acceptOperatorOrder(orderId: string): Promise<AcceptOrderResult> {
+export async function acceptOperatorOrder(orderId: string, estimatedPrepMinutes: number): Promise<AcceptOrderResult> {
   const response = await fetch(`/api/v1/operator/orders/${orderId}/accept`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
     },
     credentials: 'include',
+    body: JSON.stringify({ estimatedPrepMinutes }),
   });
 
   if (!response.ok) {

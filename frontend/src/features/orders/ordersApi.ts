@@ -12,6 +12,7 @@ export interface CustomerOrder {
   status: string;
   paymentStatus: string;
   totalSatang: number;
+  estimatedReadyAt: string | null;
   createdAt: string;
   items: OrderItem[];
 }
@@ -74,4 +75,14 @@ export function saveCart(cart: Record<string, number>) {
 
 export function formatOrderPrice(satang: number) {
   return `฿${(satang / 100).toFixed(2)}`;
+}
+
+const readyTimeFormatter = new Intl.DateTimeFormat('en-GB', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+  timeZone: 'Asia/Bangkok',
+});
+
+export function formatEstimatedReadyTime(estimatedReadyAt: string) {
+  return readyTimeFormatter.format(new Date(estimatedReadyAt));
 }
