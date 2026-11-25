@@ -71,6 +71,26 @@ operatorRouter.patch('/orders/:id/accept', async (req: Request, res: Response) =
       return;
     }
 
+    const estimatedPrepMinutes: unknown = req.body?.estimatedPrepMinutes;
+    if (
+      typeof estimatedPrepMinutes !== 'number' ||
+      !Number.isSafeInteger(estimatedPrepMinutes) ||
+      estimatedPrepMinutes < 5 ||
+      estimatedPrepMinutes > 60 ||
+      estimatedPrepMinutes % 5 !== 0
+    ) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_PREP_ESTIMATE',
+          message: 'Preparation estimate must be an integer multiple of 5 between 5 and 60 minutes.',
+        },
+      });
+      return;
+    }
+
+    const acceptanceTime = new Date();
+    const estimatedReadyAt = new Date(acceptanceTime.getTime() + estimatedPrepMinutes * 60 * 1000);
+
     // Atomic compare-and-set: update conditionally WHERE status = 'PENDING'
     const updateResult = await prisma.order.updateMany({
       where: {
@@ -79,6 +99,7 @@ operatorRouter.patch('/orders/:id/accept', async (req: Request, res: Response) =
       },
       data: {
         status: OrderStatus.ACCEPTED,
+        estimatedReadyAt,
       },
     });
 
@@ -118,6 +139,7 @@ operatorRouter.patch('/orders/:id/accept', async (req: Request, res: Response) =
         status: true,
         paymentStatus: true,
         totalSatang: true,
+        estimatedReadyAt: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -129,6 +151,7 @@ operatorRouter.patch('/orders/:id/accept', async (req: Request, res: Response) =
         status: updatedOrder!.status,
         paymentStatus: updatedOrder!.paymentStatus,
         totalSatang: updatedOrder!.totalSatang,
+        estimatedReadyAt: updatedOrder!.estimatedReadyAt!.toISOString(),
         updatedAt: updatedOrder!.updatedAt,
       },
     });

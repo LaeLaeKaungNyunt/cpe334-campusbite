@@ -8,6 +8,7 @@ import { SEED_IDS } from '../../prisma/seed.js';
 let prisma: PrismaClient;
 let operatorCookie: string;
 let customerCookie: string;
+let customerBCookie: string;
 
 // Isolated list of order IDs created specifically for F-04 tests
 const testOrderIds: string[] = [];
@@ -104,6 +105,14 @@ beforeAll(async () => {
       password: 'DemoPassword123!',
     });
   customerCookie = extractSessionCookie(custLogin);
+
+  const custBLogin = await request(app)
+    .post('/api/v1/auth/login')
+    .send({
+      email: 'customer2@campusbite.test',
+      password: 'DemoPassword123!',
+    });
+  customerBCookie = extractSessionCookie(custBLogin);
 });
 
 afterEach(async () => {
@@ -133,7 +142,7 @@ afterAll(async () => {
   await prisma.session.deleteMany({
     where: {
       user: {
-        email: { in: ['operator@campusbite.test', 'customer1@campusbite.test'] },
+        email: { in: ['operator@campusbite.test', 'customer1@campusbite.test', 'customer2@campusbite.test'] },
       },
     },
   });
@@ -209,6 +218,19 @@ describe('F-04: Operator Order Management (RED Phase)', () => {
       expect(updatedOrder!.status).toBe(OrderStatus.ACCEPTED);
     });
 
+    it.each([5, 60])('accepts the valid preparation estimate boundary of %i minutes', async (minutes) => {
+      const order = await createTestOrder({ customerId: SEED_IDS.customerA, status: OrderStatus.PENDING });
+
+      const res = await request(app)
+        .patch(`/api/v1/operator/orders/${order.id}/accept`)
+        .set('Cookie', operatorCookie)
+        .send({ estimatedPrepMinutes: minutes });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.status).toBe(OrderStatus.ACCEPTED);
+      expect(typeof res.body.data.estimatedReadyAt).toBe('string');
+    });
+
     it('L7-F04-T02 rejects a zero prep estimate and leaves the PENDING order unchanged', async () => {
       const order = await createTestOrder({ customerId: SEED_IDS.customerA, status: OrderStatus.PENDING });
 
@@ -225,12 +247,38 @@ describe('F-04: Operator Order Management (RED Phase)', () => {
       expect(unchangedOrder!.status).toBe(OrderStatus.PENDING);
     });
 
+    it.each([
+      ['missing', {}],
+      ['null', { estimatedPrepMinutes: null }],
+      ['negative', { estimatedPrepMinutes: -5 }],
+      ['fractional', { estimatedPrepMinutes: 2.5 }],
+      ['not a multiple of five', { estimatedPrepMinutes: 7 }],
+      ['above the maximum', { estimatedPrepMinutes: 65 }],
+      ['numeric string', { estimatedPrepMinutes: '20' }],
+      ['unsafe integer', { estimatedPrepMinutes: Number.MAX_SAFE_INTEGER + 1 }],
+    ])('rejects %s prep estimates without changing the order', async (_label, payload) => {
+      const order = await createTestOrder({ customerId: SEED_IDS.customerA, status: OrderStatus.PENDING });
+
+      const res = await request(app)
+        .patch(`/api/v1/operator/orders/${order.id}/accept`)
+        .set('Cookie', operatorCookie)
+        .send(payload);
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('INVALID_PREP_ESTIMATE');
+
+      const unchangedOrder = await prisma.order.findUnique({ where: { id: order.id } });
+      expect(unchangedOrder!.status).toBe(OrderStatus.PENDING);
+      expect(unchangedOrder!.estimatedReadyAt).toBeNull();
+    });
+
     it('allows authenticated OPERATOR to accept a PENDING order, returning ACCEPTED', async () => {
       const order = await createTestOrder({ customerId: SEED_IDS.customerA, status: OrderStatus.PENDING });
 
       const res = await request(app)
         .patch(`/api/v1/operator/orders/${order.id}/accept`)
-        .set('Cookie', operatorCookie);
+        .set('Cookie', operatorCookie)
+        .send({ estimatedPrepMinutes: 20 });
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty('data');
@@ -255,10 +303,11 @@ describe('F-04: Operator Order Management (RED Phase)', () => {
 
       const res = await request(app)
         .patch(`/api/v1/operator/orders/${order.id}/accept`)
-        .set('Cookie', operatorCookie);
+        .set('Cookie', operatorCookie)
+        .send({ estimatedPrepMinutes: 15 });
 
       expect(res.status).toBe(409);
-      expect(res.body).toHaveProperty('error');
+      expect(res.body.error.code).toBe('ORDER_NOT_PENDING');
 
       // Verify order status in database is unaltered
       const checkOrder = await prisma.order.findUnique({ where: { id: order.id } });
@@ -270,10 +319,11 @@ describe('F-04: Operator Order Management (RED Phase)', () => {
 
       const res = await request(app)
         .patch(`/api/v1/operator/orders/${order.id}/accept`)
-        .set('Cookie', operatorCookie);
+        .set('Cookie', operatorCookie)
+        .send({ estimatedPrepMinutes: 15 });
 
       expect(res.status).toBe(409);
-      expect(res.body).toHaveProperty('error');
+      expect(res.body.error.code).toBe('ORDER_NOT_PENDING');
 
       // Verify order status in database is unaltered
       const checkOrder = await prisma.order.findUnique({ where: { id: order.id } });
@@ -285,7 +335,8 @@ describe('F-04: Operator Order Management (RED Phase)', () => {
 
       const res = await request(app)
         .patch(`/api/v1/operator/orders/${nonexistentId}/accept`)
-        .set('Cookie', operatorCookie);
+        .set('Cookie', operatorCookie)
+        .send({ estimatedPrepMinutes: 20 });
 
       expect(res.status).toBe(404);
       expect(res.body).toHaveProperty('error');
@@ -362,7 +413,8 @@ describe('F-04: Operator Order Management (RED Phase)', () => {
       // 1. Operator accepts the order
       const acceptRes = await request(app)
         .patch(`/api/v1/operator/orders/${order.id}/accept`)
-        .set('Cookie', operatorCookie);
+        .set('Cookie', operatorCookie)
+        .send({ estimatedPrepMinutes: 20 });
 
       expect(acceptRes.status).toBe(200);
 
@@ -373,6 +425,8 @@ describe('F-04: Operator Order Management (RED Phase)', () => {
       });
       expect(persistedOrder).not.toBeNull();
       expect(persistedOrder!.status).toBe(OrderStatus.ACCEPTED);
+      expect(persistedOrder!.estimatedReadyAt).not.toBeNull();
+      expect(persistedOrder!.estimatedReadyAt!.toISOString()).toBe(acceptRes.body.data.estimatedReadyAt);
       expect(persistedOrder!.updatedAt.getTime()).toBeGreaterThanOrEqual(persistedOrder!.createdAt.getTime());
 
       // 3. Operator orders list reflects the updated ACCEPTED status
@@ -384,6 +438,46 @@ describe('F-04: Operator Order Management (RED Phase)', () => {
       const found = listRes.body.data.find((o: { id: string }) => o.id === order.id);
       expect(found).toBeDefined();
       expect(found.status).toBe(OrderStatus.ACCEPTED);
+      expect(found.estimatedReadyAt).toBe(persistedOrder!.estimatedReadyAt!.toISOString());
+    });
+
+    it('returns a persisted estimate to its customer owner and denies another customer', async () => {
+      const order = await createTestOrder({ customerId: SEED_IDS.customerA, status: OrderStatus.PENDING });
+      const acceptRes = await request(app)
+        .patch(`/api/v1/operator/orders/${order.id}/accept`)
+        .set('Cookie', operatorCookie)
+        .send({ estimatedPrepMinutes: 20 });
+      expect(acceptRes.status).toBe(200);
+
+      const ownerRes = await request(app)
+        .get(`/api/v1/orders/${order.id}`)
+        .set('Cookie', customerCookie);
+      expect(ownerRes.status).toBe(200);
+      expect(ownerRes.body.data.estimatedReadyAt).toBe(acceptRes.body.data.estimatedReadyAt);
+
+      const otherCustomerRes = await request(app)
+        .get(`/api/v1/orders/${order.id}`)
+        .set('Cookie', customerBCookie);
+      expect(otherCustomerRes.status).toBe(404);
+      expect(otherCustomerRes.body.error.code).toBe('ORDER_NOT_FOUND');
+    });
+
+    it('keeps historical accepted orders with a null estimate readable', async () => {
+      const order = await createTestOrder({ customerId: SEED_IDS.customerA, status: OrderStatus.ACCEPTED });
+
+      const customerRes = await request(app)
+        .get(`/api/v1/orders/${order.id}`)
+        .set('Cookie', customerCookie);
+      expect(customerRes.status).toBe(200);
+      expect(customerRes.body.data.estimatedReadyAt).toBeNull();
+
+      const operatorRes = await request(app)
+        .get('/api/v1/operator/orders')
+        .set('Cookie', operatorCookie);
+      expect(operatorRes.status).toBe(200);
+      const listedOrder = operatorRes.body.data.find((candidate: { id: string }) => candidate.id === order.id);
+      expect(listedOrder).toBeDefined();
+      expect(listedOrder.estimatedReadyAt).toBeNull();
     });
   });
 });

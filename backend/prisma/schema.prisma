@@ -66,6 +66,7 @@ model Order {
   status        OrderStatus   @default(PENDING)
   paymentStatus PaymentStatus @default(UNPAID)
   totalSatang   Int
+  estimatedReadyAt DateTime?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   customer      User          @relation(fields: [customerId], references: [id], onDelete: Restrict)
