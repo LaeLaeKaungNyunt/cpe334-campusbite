@@ -185,6 +185,46 @@ describe('F-04: Operator Order Management (RED Phase)', () => {
   // AC-16 / TEST-16: Operator accepts a pending order
   // -------------------------------------------------------------------------
   describe('AC-16 / TEST-16: Pending order acceptance', () => {
+    it('L7-F04-T01 accepts a PENDING order with a prep estimate and returns an ISO UTC estimatedReadyAt', async () => {
+      const order = await createTestOrder({ customerId: SEED_IDS.customerA, status: OrderStatus.PENDING });
+
+      const res = await request(app)
+        .patch(`/api/v1/operator/orders/${order.id}/accept`)
+        .set('Cookie', operatorCookie)
+        .send({ estimatedPrepMinutes: 20 });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toMatchObject({
+        id: order.id,
+        status: OrderStatus.ACCEPTED,
+      });
+      expect(typeof res.body.data.estimatedReadyAt).toBe('string');
+      const estimatedReadyAt = res.body.data.estimatedReadyAt as string;
+      const parsedReadyAt = new Date(estimatedReadyAt);
+      expect(Number.isNaN(parsedReadyAt.getTime())).toBe(false);
+      expect(parsedReadyAt.toISOString()).toBe(estimatedReadyAt);
+
+      const updatedOrder = await prisma.order.findUnique({ where: { id: order.id } });
+      expect(updatedOrder).not.toBeNull();
+      expect(updatedOrder!.status).toBe(OrderStatus.ACCEPTED);
+    });
+
+    it('L7-F04-T02 rejects a zero prep estimate and leaves the PENDING order unchanged', async () => {
+      const order = await createTestOrder({ customerId: SEED_IDS.customerA, status: OrderStatus.PENDING });
+
+      const res = await request(app)
+        .patch(`/api/v1/operator/orders/${order.id}/accept`)
+        .set('Cookie', operatorCookie)
+        .send({ estimatedPrepMinutes: 0 });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('INVALID_PREP_ESTIMATE');
+
+      const unchangedOrder = await prisma.order.findUnique({ where: { id: order.id } });
+      expect(unchangedOrder).not.toBeNull();
+      expect(unchangedOrder!.status).toBe(OrderStatus.PENDING);
+    });
+
     it('allows authenticated OPERATOR to accept a PENDING order, returning ACCEPTED', async () => {
       const order = await createTestOrder({ customerId: SEED_IDS.customerA, status: OrderStatus.PENDING });
 
