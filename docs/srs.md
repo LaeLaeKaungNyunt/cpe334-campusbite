@@ -6,8 +6,8 @@
 | Project theme | Theme 4 — E-Commerce or Ordering System |
 | Product | CampusBite: Campus Food Pre-Ordering and Pickup Management System |
 | Team | 67070503481 (GitHub: `LaeLaeKaungNyunt`); Naing Zay Linn, 67070503484 (GitHub: `naingzaylinn`) |
-| Baseline version | SRS v0.1 — scope accepted by both students; formal repository PR review pending |
-| Prepared | 7 November 2026 |
+| Baseline version | SRS v0.1 (7 November 2026); Lab 7 v0.2 revised 25 November 2026 |
+| Prepared | 7 November 2026; revised 25 November 2026 (Lab 7 Part A, Issue #48) |
 | Primary assessment | Project Deliverable 1, Part A (10 points) |
 
 ## 1. Stakeholder problem and context
@@ -57,7 +57,7 @@ Each statement describes observable behavior. The feature inventory and traceabi
 | FR-02 | The system shall display active menu items from the database with names, prices in THB, and availability/stock status. | 1 |
 | FR-03 | An authenticated Customer shall submit an order containing one or more menu items with selected quantities. | 1 |
 | FR-04 | An authenticated Customer shall retrieve a list of their orders and open persisted order details, totals, and statuses. | 1 |
-| FR-05 | An authenticated Operator shall inspect incoming café orders and accept a pending order. | 1 |
+| FR-05 | An authenticated Operator shall inspect incoming café orders and accept a pending order by providing a mandatory preparation time estimate (5–60 minutes in 5-minute increments), causing the system to calculate and persist the estimated ready timestamp. | 1 (Revised Lab 7 v0.2) |
 | FR-06 | An Operator shall create, update, activate/deactivate, and manage the stock and price of menu items. | 2 |
 | FR-07 | A Customer or authorized Operator shall cancel an eligible pending order and receive a recorded result. | 2 |
 | FR-08 | An Operator shall progress accepted orders through preparation, ready-for-pickup, and completed states; Customers shall see their statuses. | 2 |
@@ -76,7 +76,7 @@ Each statement describes observable behavior. The feature inventory and traceabi
 | BR-05 | Each order item stores a snapshot of the unit price at submission; later menu-price changes must not modify historical totals. | 1 |
 | BR-06 | Validation, order creation, order-item creation, and stock decrement occur atomically; competing requests must not oversell or produce partial orders. | 1 |
 | BR-07 | A Customer can access only their own protected order records; neither another customer nor an anonymous requester may read them. | 1 |
-| BR-08 | Only an Operator may inspect the operator order list or accept an order; only `PENDING → ACCEPTED` is valid in Sprint 1, and repeat acceptance is rejected. | 1 |
+| BR-08 | Only an Operator may inspect the operator order list or accept an order; only `PENDING → ACCEPTED` is valid in Sprint 1, and repeat acceptance is rejected. In Lab 7 v0.2, order acceptance requires a valid preparation time estimate (integer multiple of 5 between 5 and 60 minutes inclusive); the system calculates and atomically records `estimatedReadyAt`. | 1 (Revised Lab 7 v0.2) |
 | BR-09 | Only Operators may change menu/stock records. A hidden button alone is not authorization. | 2 |
 | BR-10 | Cancellation is allowed only while an order is `PENDING`; a successful cancellation restores its reserved stock exactly once. | 2 |
 | BR-11 | Fulfillment follows `ACCEPTED → PREPARING → READY → COMPLETED`; backward, skipped, or repeated transitions are rejected. | 2 |
@@ -106,6 +106,7 @@ Each statement describes observable behavior. The feature inventory and traceabi
 | DEC-06 | Menu items with stock zero remain visible as **Sold Out**, but inactive items are hidden. | Customers can see availability while inactive catalog entries stay unpublished. |
 | DEC-07 | An order is not considered a sale until completed and marked paid (simulated). | Defines a non-misleading summary rule for later reporting. |
 | DEC-08 | Use an opaque server-side session with an HttpOnly cookie, database-backed revocation, and a 24-hour expiry as specified in the System-Level SDS and F-01 contract. | Both students accepted the proposed baseline on 7 November; implementation and security checks remain to be verified. |
+| DEC-09 | Operator order acceptance requires an estimated preparation duration (5–60 minutes in 5-minute increments); the server calculates and atomically persists `estimatedReadyAt` in UTC. Pre-existing orders retain nullable `estimatedReadyAt`. The estimate does not automatically transition order status. (Lab 7 v0.2) | Provides customer visibility into collection timing while keeping the fulfillment lifecycle manual in Sprint 2. |
 
 ### Resolved domain questions
 
@@ -123,6 +124,20 @@ On 7 November, both students stated that they would proceed with the proposed ba
 ## 8. Acceptance of this baseline and change control
 
 Both students must record approval or specific change requests in a reviewed GitHub PR **before implementing feature code**. If a requirement changes, revise its ID-linked feature contract, acceptance criteria, tests, and traceability; preserve the prior Git history. The feature inventory and three-sprint plan must collectively cover all FR, BR, and NFR IDs listed above.
+
+### Lab 7 v0.2 Revision Record (25 November 2026 — Issue #48)
+
+In Lab 7 Part A, requirement FR-05 and business rule BR-08 were revised to support operator preparation time estimation:
+- **Baseline Sprint 1 v0.1 behavior (7 November 2026):** An Operator accepted a `PENDING` order via `PATCH /api/v1/operator/orders/:id/accept` without providing a request body. The server updated status conditionally to `ACCEPTED`. No time estimate or ready timestamp was recorded.
+- **Lab 7 v0.2 behavior (25 November 2026):** Order acceptance now mandates an operator preparation duration estimate (`estimatedPrepMinutes`) as an integer multiple of 5 between 5 and 60 minutes inclusive. The server calculates `estimatedReadyAt = acceptanceTime + (estimatedPrepMinutes * 60 * 1000)` and atomically persists both `status = ACCEPTED` and `estimatedReadyAt` in UTC.
+- **Compatibility & Non-functional constraints:**
+  - `Order.estimatedReadyAt` is defined as nullable (`DateTime?`).
+  - Pre-existing Sprint 1 orders retain `estimatedReadyAt = null`; no historical backfill is performed.
+  - The customer owner can view the estimate via `GET /api/v1/orders/:id` (FR-04). Unauthorized users are denied (NFR-01).
+  - Repeated acceptance remains rejected with HTTP 409 Conflict (`ORDER_NOT_PENDING`).
+  - Invalid estimate payloads return HTTP 400 with code `INVALID_PREP_ESTIMATE`.
+  - The calculated estimate does not automatically trigger order state transitions.
+  - Sprint 2 features F-05 through F-08 remain unchanged.
 
 ## 9. Terminology
 

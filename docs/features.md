@@ -1,8 +1,8 @@
 # CampusBite — Feature Inventory
 
-**Version:** v0.1 proposed baseline, 7 November 2026  
+**Version:** v0.1 proposed baseline (7 November 2026); Lab 7 v0.2 revision (25 November 2026)
 **Source of truth:** [`srs.md`](srs.md)  
-**Status:** For joint student review before implementation
+**Status:** Lab 7 Part A contract revision for Issue #48 (Designed / Not run)
 
 The product has ten planned features. Sprint 1 intentionally contains the smallest real order journey, including login, server authorization, UI/API/database persistence, and a tested order rule. IDs remain stable when features are revised.
 
@@ -11,7 +11,7 @@ The product has ten planned features. Sprint 1 intentionally contains the smalle
 | F-01 | Authentication: login, logout, current-user identity, sessions, role guards | FR-01, BR-07, BR-08, NFR-01 | 1 | User/session schema and seed | 3481 / 3484 |
 | F-02 | Menu browsing: active products, price and stock status, UI states | FR-02, BR-03, NFR-03 | 1 | MenuItem schema and seed | 3484 / 3481 |
 | F-03 | Customer ordering: multi-item order, server totals, atomic stock reservation, own-order retrieval | FR-03, FR-04, BR-01–BR-07, NFR-01, NFR-02, NFR-04 | 1 | F-01, F-02, Order/OrderItem schema | 3484 / 3481 |
-| F-04 | Operator order management: incoming orders and pending-to-accepted transition | FR-05, BR-08, NFR-01, NFR-04 | 1 | F-01, F-03 | 3481 / 3484 |
+| F-04 | Operator order management: incoming orders and pending-to-accepted transition with mandatory preparation estimate (5–60 min, step 5) and atomic estimatedReadyAt calculation | FR-05, BR-08, FR-04, NFR-01, NFR-04 | 1 (Revised Lab 7 v0.2) | F-01, F-03 | 3481 / 3484 |
 | F-05 | Menu/stock administration: create/edit/activate items, adjust stock | FR-06, BR-09 | 2 | F-01, F-02, F-03 | To agree in Sprint 2 |
 | F-06 | Cancellation: pending-order cancellation, stock restoration exactly once | FR-07, BR-10 | 2 | F-03, F-04 | To agree in Sprint 2 |
 | F-07 | Fulfillment: accepted, preparing, ready, completed transitions and customer status | FR-08, BR-11 | 2 | F-04 | To agree in Sprint 2 |
@@ -32,5 +32,6 @@ The product has ten planned features. Sprint 1 intentionally contains the smalle
 
 - There are no real payment, delivery, multi-café, customer-registration, notification, or pickup-slot features.
 - A feature that changes the agreed baseline must have an updated SRS/feature contract, traceability row, and reviewed Git history.
+- Lab 7 v0.2 scope change: F-04 order acceptance requires an operator preparation estimate (5–60 min in 5-minute increments), calculating and persisting nullable `Order.estimatedReadyAt` in UTC. Existing orders remain null-compatible with no backfill. The estimate does not automatically change order status. Sprint 2 scope (F-05 through F-08) remains unchanged.
 - Sprint 2 features must be completed by 29 November; Sprint 3 must show contract and implementation progress then and be finished by 13 December.
 

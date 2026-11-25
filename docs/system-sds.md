@@ -2,8 +2,8 @@
 
 | Field | Value |
 |---|---|
-| Version | SDS v0.1, proposed for team review |
-| Prepared | 7 November 2026 |
+| Version | SDS v0.1 (7 November 2026); Lab 7 v0.2 revised 25 November 2026 |
+| Prepared | 7 November 2026; revised 25 November 2026 (Lab 7 Part A, Issue #48) |
 | Source requirements | `docs/srs.md` |
 | Assessment | Deliverable 1, Part C (15 points) |
 
@@ -51,7 +51,7 @@ erDiagram
 | `User` | `id` UUID PK, `email` text, `passwordHash` text, `role` enum (`CUSTOMER`,`OPERATOR`), `createdAt` | Unique normalized email; no stored plaintext password; customer order ownership via `id`. |
 | `Session` | `id` UUID PK, `userId` FK, `tokenHash` text, `expiresAt`, `createdAt` | Unique token hash; delete on logout; reject expired session; user FK cascade on test-data cleanup. |
 | `MenuItem` | `id` UUID PK, `name` text, `description` text?, `priceSatang` integer, `stockQuantity` integer, `isActive` boolean, `createdAt`, `updatedAt` | `priceSatang >= 0`; `stockQuantity >= 0`; inactive items hidden, zero-stock items shown sold out. |
-| `Order` | `id` UUID PK, `customerId` FK, `status` enum, `paymentStatus` enum, `totalSatang` integer, `createdAt`, `updatedAt` | Customer FK, nonnegative total, indexed `(customerId,createdAt)`; initially `PENDING` and `UNPAID`. |
+| `Order` | `id` UUID PK, `customerId` FK, `status` enum, `paymentStatus` enum, `totalSatang` integer, `estimatedReadyAt` DateTime? (Lab 7 v0.2), `createdAt`, `updatedAt` | Customer FK, nonnegative total, indexed `(customerId,createdAt)`; initially `PENDING` and `UNPAID`; `estimatedReadyAt` is nullable UTC timestamp calculated at operator acceptance (null for historical orders). |
 | `OrderItem` | `id` UUID PK, `orderId` FK, `menuItemId` FK, `quantity` integer, `unitPriceSatang` integer, `lineTotalSatang` integer | Positive quantity; nonnegative prices; unique `(orderId,menuItemId)`; price snapshot remains unchanged after menu edits. |
 
 PostgreSQL checks and unique/FK constraints will be implemented through migrations, not solely application-level validation. The complete schema in `backend/prisma/schema.prisma` and any SQL migration checks must match this model.
@@ -68,8 +68,8 @@ Conditional updates and/or serializable retry handling must prevent competing re
 
 ### State model
 
-- Sprint 1: `PENDING → ACCEPTED` (Operator only). Invalid/repeated acceptance returns a conflict and leaves the record unchanged.
-- Sprint 2: `PENDING → CANCELLED` (with exactly-once stock restore) and `ACCEPTED → PREPARING → READY → COMPLETED`.
+- Sprint 1 / Lab 7: `PENDING → ACCEPTED` (Operator only). In Lab 7 v0.2, acceptance mandates an operator preparation estimate (`estimatedPrepMinutes` integer multiple of 5 between 5 and 60 inclusive); the server atomically saves `ACCEPTED` status and calculated `estimatedReadyAt` in UTC. Invalid/repeated acceptance returns a conflict (HTTP 409) and leaves the record unchanged.
+- Sprint 2: `PENDING → CANCELLED` (with exactly-once stock restore) and `ACCEPTED → PREPARING → READY → COMPLETED`. The calculated `estimatedReadyAt` timestamp does not automatically advance order state.
 - Payment status is separate: `UNPAID → PAID_SIMULATED` by an Operator. No real gateway is connected.
 
 ## 3. UI structure and conventions
@@ -80,8 +80,8 @@ Conditional updates and/or serializable retry handling must prevent competing re
 | `/menu` | Customer (menu may also be browsed anonymously) | Active menu, THB prices, stock badges, add-to-cart controls; inactive hidden. |
 | `/cart` | Customer | Quantity editing, provisional displayed total, submit; server response is authoritative. |
 | `/orders` | Customer | Own orders, newest first, empty state. |
-| `/orders/:id` | Owning Customer | Persisted items, price snapshots, total, status; never show another owner's data. |
-| `/operator/orders` | Operator | Incoming orders, detail and Accept action for `PENDING` only. |
+| `/orders/:id` | Owning Customer | Persisted items, price snapshots, total, status, and calculated `estimatedReadyAt` (when present); never show another owner's data. Null estimates on historical orders rendered gracefully. |
+| `/operator/orders` | Operator | Incoming orders, detail, preparation time selector (5–60 min in 5-min increments), and Accept action for `PENDING` only. |
 | Later screens | Operator/Customer | Menu administration, cancellation, fulfillment, payment and reporting as allocated in the sprint plan. |
 
 UI conventions: clear loading/empty/error states; nonblocking form feedback; disable an action during pending submission; show server validation messages safely; never use UI visibility as a replacement for API permission enforcement. The frontend does not send an authoritative user ID, role, unit price, or trusted total when creating orders.
@@ -98,11 +98,11 @@ Prefix all application endpoints with `/api/v1`. Successful responses return JSO
 | `GET /api/v1/menu-items` | Public | Active menu entries, THB price in satang, availability/stock status. |
 | `POST /api/v1/orders` | Customer | Accept `{ items: [{ menuItemId, quantity }] }`; return persisted ID, items, total and status. |
 | `GET /api/v1/orders` | Customer | Return only own orders. |
-| `GET /api/v1/orders/:id` | Owning Customer | Return saved order; another customer's order responds as not found. |
-| `GET /api/v1/operator/orders` | Operator | Return café orders, optionally filtered by status later. |
-| `PATCH /api/v1/operator/orders/:id/accept` | Operator | Accept only pending order; return persisted new status. |
+| `GET /api/v1/orders/:id` | Owning Customer | Return saved order; another customer's order responds as not found. Returns `estimatedReadyAt: string \| null`. |
+| `GET /api/v1/operator/orders` | Operator | Return café orders, including `estimatedReadyAt: string \| null`, optionally filtered by status later. |
+| `PATCH /api/v1/operator/orders/:id/accept` | Operator | Accept pending order with `{"estimatedPrepMinutes": 5..60}`; server calculates and atomically persists `estimatedReadyAt`; returns 200 with new status and estimate. |
 
-Standard status policy: `200` successful read/update, `201` created order, `400` invalid shape/quantity, `401` no/invalid session, `403` authenticated wrong role, `404` absent or unauthorized private resource, `409` unavailable stock or invalid transition, `500` sanitized internal error. Full request/response examples and boundaries are specified in feature contracts.
+Standard status policy: `200` successful read/update, `201` created order, `400` invalid shape/quantity or invalid prep estimate (`INVALID_PREP_ESTIMATE`), `401` no/invalid session, `403` authenticated wrong role, `404` absent or unauthorized private resource, `409` unavailable stock or invalid transition (`ORDER_NOT_PENDING`), `500` sanitized internal error. Full request/response examples and boundaries are specified in feature contracts.
 
 ## 5. Roles and ownership matrix
 
@@ -112,9 +112,9 @@ Standard status policy: `200` successful read/update, `201` created order, `400`
 | Login | Yes | Yes | Yes |
 | Current identity / logout | No | Own session | Own session |
 | Create order | No | Yes | No (no customer impersonation) |
-| View order detail | No | Own only | Through operator order view |
+| View order detail & ready estimate | No | Own only | Through operator order view |
 | List all café orders | No | No | Yes |
-| Accept pending order | No | No | Yes |
+| Accept pending order with estimate | No | No | Yes |
 | Edit menu/stock (Sprint 2) | No | No | Yes |
 | Cancel pending order (Sprint 2) | No | Own only | Authorized café orders |
 | Change fulfillment/payment (Sprint 2) | No | No | Yes |
@@ -144,5 +144,5 @@ For Lab 5, package the accepted application with Docker and deploy the combined 
 
 ## 9. Design status and review
 
-This is the **proposed** system-level design, not a claim of implemented behavior. Both students must review it, especially the transaction strategy, auth/session approach, and test runner, before approving the documentation PR. Any changes must be reflected in SRS, feature contracts, traceability and implementation/tests. No cloud or CI execution is claimed at this stage.
+This is the system-level design for CampusBite. The baseline was established in Sprint 1 v0.1 (7 November 2026) and revised in Lab 7 v0.2 (25 November 2026, Issue #48) to integrate operator preparation time estimation and atomic estimated ready time persistence. All design adjustments are reflected across SRS (`srs.md`), F-04 contract (`f04-operator.md`), test specification (`test-specification.md`), and traceability (`traceability.md`). Lab 7 Part A documentation changes are recorded as Designed / Not run; no cloud, CI or schema execution is claimed at this stage.
 
