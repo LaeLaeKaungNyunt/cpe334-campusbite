@@ -1,10 +1,10 @@
 # F-06 — Order Cancellation Contract
 
-**Contract version:** v0.2 revised (26 November 2026)  
-**Feature:** F-06 Order Cancellation  
-**Requirements:** FR-07, BR-10; NFR-01, NFR-02, NFR-04  
-**Dependencies:** F-01 authentication and roles; F-03 persisted orders and stock reservation; F-05 stock administration coordination  
-**Status:** Designed / Not run  
+**Contract version:** v0.2 revised (26 November 2026)<br>
+**Feature:** F-06 Order Cancellation<br>
+**Requirements:** FR-07, BR-10; NFR-01, NFR-02, NFR-04<br>
+**Dependencies:** F-01 authentication and roles; F-03 persisted orders and stock reservation; F-05 stock administration coordination<br>
+**Status:** Designed / Not run<br>
 **Review:** Proposed for agreement with 67070503481 before implementation
 
 ## 1. Requirement links and workflow
