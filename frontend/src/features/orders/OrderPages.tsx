@@ -4,6 +4,7 @@ import {
   fetchCurrentUser,
   fetchOrder,
   fetchOrders,
+  formatEstimatedReadyTime,
   formatOrderPrice,
   readCart,
   saveCart,
@@ -127,6 +128,12 @@ export function OrderDetailPage({ orderId }: { orderId: string }) {
   }, [orderId]);
   return <PageFrame><section className="order-heading"><p className="eyebrow">Saved order</p><h1>Order details</h1></section>
     {loading && <p role="status">Loading order…</p>}{error && <section className="order-panel"><p className="order-error" role="alert">{error}</p><p>This order may not exist or may belong to another Customer.</p><a href="/orders">Back to my orders</a></section>}
-    {order && <section className="order-panel"><p>Status: <strong>{order.status}</strong></p><p>Payment: <strong>{order.paymentStatus}</strong></p><ul className="review-lines">{order.items.map((item) => <li key={item.id}><div><strong>{item.menuItem?.name || 'Menu item'}</strong><span>{item.quantity} × {formatOrderPrice(item.unitPriceSatang)}</span></div><strong>{formatOrderPrice(item.lineTotalSatang)}</strong></li>)}</ul><div className="review-total"><span>Saved total</span><strong>{formatOrderPrice(order.totalSatang)}</strong></div><p className="order-muted">Order ID: <code>{order.id}</code></p><a href="/orders">Back to my orders</a></section>}
+    {order && <section className="order-panel">
+      <p>Status: <strong>{order.status}</strong></p>
+      {order.status === 'ACCEPTED' && order.estimatedReadyAt && (
+        <p>Estimated ready: <time dateTime={order.estimatedReadyAt}>{formatEstimatedReadyTime(order.estimatedReadyAt)}</time></p>
+      )}
+      <p>Payment: <strong>{order.paymentStatus}</strong></p><ul className="review-lines">{order.items.map((item) => <li key={item.id}><div><strong>{item.menuItem?.name || 'Menu item'}</strong><span>{item.quantity} × {formatOrderPrice(item.unitPriceSatang)}</span></div><strong>{formatOrderPrice(item.lineTotalSatang)}</strong></li>)}</ul><div className="review-total"><span>Saved total</span><strong>{formatOrderPrice(order.totalSatang)}</strong></div><p className="order-muted">Order ID: <code>{order.id}</code></p><a href="/orders">Back to my orders</a>
+    </section>}
   </PageFrame>;
 }

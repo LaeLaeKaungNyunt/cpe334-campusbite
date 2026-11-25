@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { formatEstimatedReadyTime } from '../orders/ordersApi';
 import {
   fetchOperatorOrders,
   acceptOperatorOrder,
@@ -11,6 +12,8 @@ interface AuthUser {
   role: 'CUSTOMER' | 'OPERATOR';
 }
 
+const prepTimeOptions = Array.from({ length: 12 }, (_, index) => (index + 1) * 5);
+
 export function OperatorOrdersPage() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
@@ -18,7 +21,9 @@ export function OperatorOrdersPage() {
   const [orders, setOrders] = useState<OperatorOrder[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [prepMinutesByOrder, setPrepMinutesByOrder] = useState<Record<string, number>>({});
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const acceptanceInFlight = useRef(false);
   const [confirmationMessage, setConfirmationMessage] = useState<string | null>(null);
 
   // Check current session
@@ -48,6 +53,7 @@ export function OperatorOrdersPage() {
   }, []);
 
   const loadOrders = useCallback(async () => {
+    if (acceptanceInFlight.current) return;
     setLoading(true);
     setError(null);
     try {
@@ -67,23 +73,26 @@ export function OperatorOrdersPage() {
     }
   }, [authLoading, currentUser, loadOrders]);
 
-  async function handleAccept(orderId: string) {
+  async function handleAccept(orderId: string, estimatedPrepMinutes: number) {
+    if (loading || acceptanceInFlight.current || !prepTimeOptions.includes(estimatedPrepMinutes)) return;
+
+    acceptanceInFlight.current = true;
     setAcceptingId(orderId);
     setConfirmationMessage(null);
     setError(null);
 
     try {
-      const result = await acceptOperatorOrder(orderId);
-      // Update local state with the server-returned status
+      const { id, status, estimatedReadyAt, updatedAt } = await acceptOperatorOrder(orderId, estimatedPrepMinutes);
       setOrders((prev) =>
         prev.map((order) =>
-          order.id === result.id ? { ...order, status: result.status } : order,
+          order.id === id ? { ...order, status, estimatedReadyAt, updatedAt } : order,
         ),
       );
       setConfirmationMessage(`Order #${orderId.slice(0, 8)} accepted successfully.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to accept order.');
     } finally {
+      acceptanceInFlight.current = false;
       setAcceptingId(null);
     }
   }
@@ -101,6 +110,7 @@ export function OperatorOrdersPage() {
 
   const pendingCount = orders.filter((o) => o.status === 'PENDING').length;
   const acceptedCount = orders.filter((o) => o.status === 'ACCEPTED').length;
+  const orderControlsDisabled = loading || acceptingId !== null;
 
   return (
     <div className="site-shell">
@@ -152,7 +162,7 @@ export function OperatorOrdersPage() {
                 type="button"
                 className="btn btn-outline btn-sm"
                 onClick={loadOrders}
-                disabled={loading}
+                disabled={orderControlsDisabled}
               >
                 {loading ? 'Refreshing...' : '↻ Refresh Orders'}
               </button>
@@ -285,6 +295,7 @@ export function OperatorOrdersPage() {
                   const isPending = order.status === 'PENDING';
                   const isAccepted = order.status === 'ACCEPTED';
                   const isSubmitting = acceptingId === order.id;
+                  const estimatedPrepMinutes = prepMinutesByOrder[order.id] ?? 0;
 
                   return (
                     <article
@@ -375,24 +386,48 @@ export function OperatorOrdersPage() {
                           display: 'flex',
                           justifyContent: 'flex-end',
                           alignItems: 'center',
+                          flexWrap: 'wrap',
                           gap: '0.75rem',
                           borderTop: '1px solid #edf2f7',
                           paddingTop: '0.75rem',
                         }}
                       >
                         {isPending && (
-                          <button
-                            type="button"
-                            className="btn btn-primary btn-sm"
-                            onClick={() => handleAccept(order.id)}
-                            disabled={isSubmitting}
-                          >
-                            {isSubmitting ? 'Accepting…' : 'Accept Order'}
-                          </button>
+                          <>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: '#4a5568' }}>
+                              Estimated preparation time
+                              <select
+                                value={estimatedPrepMinutes || ''}
+                                disabled={orderControlsDisabled}
+                                onChange={(event) => {
+                                  const minutes = Number(event.currentTarget.value);
+                                  setPrepMinutesByOrder((prev) => ({ ...prev, [order.id]: minutes }));
+                                }}
+                              >
+                                <option value="" disabled>Select minutes</option>
+                                {prepTimeOptions.map((minutes) => (
+                                  <option key={minutes} value={minutes}>{minutes} min</option>
+                                ))}
+                              </select>
+                            </label>
+                            <button
+                              type="button"
+                              className="btn btn-primary btn-sm"
+                              onClick={() => handleAccept(order.id, estimatedPrepMinutes)}
+                              disabled={orderControlsDisabled || !prepTimeOptions.includes(estimatedPrepMinutes)}
+                            >
+                              {isSubmitting ? 'Accepting…' : 'Accept Order'}
+                            </button>
+                          </>
                         )}
                         {isAccepted && (
                           <span style={{ color: '#276749', fontSize: '0.85rem', fontWeight: 600 }}>
                             ✓ Accepted &amp; In Kitchen
+                          </span>
+                        )}
+                        {isAccepted && order.estimatedReadyAt && (
+                          <span style={{ color: '#4a5568', fontSize: '0.85rem' }}>
+                            Estimated ready: <time dateTime={order.estimatedReadyAt}>{formatEstimatedReadyTime(order.estimatedReadyAt)}</time>
                           </span>
                         )}
                         {!isPending && !isAccepted && (
