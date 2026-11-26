@@ -215,6 +215,61 @@ describe('F-03 customer orders API', () => {
     expect(detail.body.data.items).toEqual([expect.objectContaining({ menuItemId: ids.latte, quantity: 1, unitPriceSatang: 6500 })]);
   });
 
+  it('F06-T01: owner cancels a pending two-item order and restores its saved quantities', async () => {
+    const created = await request(app).post('/api/v1/orders').set('Cookie', cookies.customerA).send({
+      items: [
+        { menuItemId: ids.latte, quantity: 2 },
+        { menuItemId: ids.sandwich, quantity: 1 },
+      ],
+    });
+    expect(created.status).toBe(201);
+    const originalOrder = created.body.data;
+    const latteStockAfterReservation = (await prisma.menuItem.findUnique({ where: { id: ids.latte } }))!.stockQuantity;
+    const sandwichStockAfterReservation = (await prisma.menuItem.findUnique({ where: { id: ids.sandwich } }))!.stockQuantity;
+
+    const response = await request(app)
+      .patch(`/api/v1/orders/${originalOrder.id}/cancel`)
+      .set('Cookie', cookies.customerA);
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toMatchObject({ id: originalOrder.id, status: 'CANCELLED' });
+    expect(await prisma.menuItem.findUnique({ where: { id: ids.latte } })).toMatchObject({ stockQuantity: latteStockAfterReservation + 2 });
+    expect(await prisma.menuItem.findUnique({ where: { id: ids.sandwich } })).toMatchObject({ stockQuantity: sandwichStockAfterReservation + 1 });
+    const persistedOrder = await prisma.order.findUnique({ where: { id: originalOrder.id }, include: { items: true } });
+    expect(persistedOrder).toMatchObject({
+      status: 'CANCELLED',
+      totalSatang: originalOrder.totalSatang,
+      paymentStatus: originalOrder.paymentStatus,
+    });
+    expect(persistedOrder?.items).toEqual(originalOrder.items);
+  });
+
+  it('F06-T04: repeated cancellation returns 409 ORDER_NOT_PENDING without restoring stock again', async () => {
+    const created = await request(app).post('/api/v1/orders').set('Cookie', cookies.customerA).send({
+      items: [
+        { menuItemId: ids.latte, quantity: 2 },
+        { menuItemId: ids.sandwich, quantity: 1 },
+      ],
+    });
+    expect(created.status).toBe(201);
+    const orderId = created.body.data.id as string;
+
+    const firstResponse = await request(app).patch(`/api/v1/orders/${orderId}/cancel`).set('Cookie', cookies.customerA);
+    expect(firstResponse.status).toBe(200);
+    const stocksAfterFirstCancellation = {
+      latte: (await prisma.menuItem.findUnique({ where: { id: ids.latte } }))!.stockQuantity,
+      sandwich: (await prisma.menuItem.findUnique({ where: { id: ids.sandwich } }))!.stockQuantity,
+    };
+
+    const repeatedResponse = await request(app).patch(`/api/v1/orders/${orderId}/cancel`).set('Cookie', cookies.customerA);
+
+    expect(repeatedResponse.status).toBe(409);
+    expect(repeatedResponse.body.error.code).toBe('ORDER_NOT_PENDING');
+    expect(await prisma.order.findUnique({ where: { id: orderId } })).toMatchObject({ status: 'CANCELLED' });
+    expect(await prisma.menuItem.findUnique({ where: { id: ids.latte } })).toMatchObject({ stockQuantity: stocksAfterFirstCancellation.latte });
+    expect(await prisma.menuItem.findUnique({ where: { id: ids.sandwich } })).toMatchObject({ stockQuantity: stocksAfterFirstCancellation.sandwich });
+  });
+
   it('TEST-14 / AC-14: hides another Customer order as 404 without returning protected data', async () => {
     const created = await request(app).post('/api/v1/orders').set('Cookie', cookies.customerA).send(oneLine());
     expect(created.status).toBe(201);
