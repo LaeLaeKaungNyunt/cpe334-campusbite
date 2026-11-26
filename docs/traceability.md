@@ -1,7 +1,7 @@
 # CampusBite — Requirements-to-Feature-to-Sprint Traceability
 
-**Version:** v0.1 proposed baseline (7 November 2026); Lab 7 v0.2 revised (25 November 2026, Issue #48)
-**Status:** Planned coverage and Lab 7 Part A contract revision (Designed / Not run). Update as tests are executed and releases are accepted.
+**Version:** v0.1 proposed baseline (7 November 2026); Lab 7 v0.2 revised (25 November 2026, Issue #48); Deliverable 2 v0.3 (26 November 2026)
+**Status:** Sprint 1 baseline results, Lab 7 Part A contract revision, and reviewed Deliverable 2 Sprint 2 contracts (PR #52 and PR #53). All new cases are Designed / Not run.
 
 Sprint 1 acceptance and test IDs below are planned in GitHub Issues #1–#4. Detailed expected outputs and input conditions belong in the pre-implementation feature contracts and STS. Lab 7 Part A requirements for Issue #48 revise F-04 to mandate operator preparation time estimation and atomic estimated ready timestamp persistence.
 
@@ -16,10 +16,10 @@ Sprint 1 acceptance and test IDs below are planned in GitHub Issues #1–#4. Det
 | FR-03 | F-03 | 1 | AC-09–AC-12 / TEST-09–TEST-12 |
 | FR-04 | F-03, F-04 | 1, Lab 7 | AC-13–AC-14 / TEST-13–TEST-14 (Sprint 1); `L7-F04-AC06` / `L7-F04-T06` (Lab 7 v0.2 customer estimate retrieval) |
 | FR-05 | F-04 | 1, Lab 7 | AC-15–AC-19 / TEST-15–TEST-19 (Sprint 1 baseline); `L7-F04-AC01`–`AC07` / `L7-F04-T01`–`T07` (Lab 7 v0.2 prep estimate) |
-| FR-06 | F-05 | 2 | Menu edit, authorization and stock integration tests (IDs assigned before implementation) |
-| FR-07 | F-06 | 2 | Eligible/ineligible cancellation and exactly-once stock restoration tests |
-| FR-08 | F-07 | 2 | Allowed/forbidden fulfillment status transitions and customer retrieval tests |
-| FR-09 | F-08 | 2 | Simulated payment transition and operator-permission tests |
+| FR-06 | F-05 | 2 | See §6 for the contract AC, STS cases, and current status. |
+| FR-07 | F-06 | 2 | See §6 for the contract AC, STS cases, and current status. |
+| FR-08 | F-07 | 2 | See §6 for the contract AC, STS cases, and current status. |
+| FR-09 | F-08 | 2 | See §6 for the contract AC, STS cases, and current status. |
 | FR-10 | F-09 | 3 | Own-order/operator filtering tests |
 | FR-11 | F-09 | 3 | Completed-sales aggregation and exclusion tests |
 
@@ -37,11 +37,11 @@ Sprint 1 acceptance and test IDs below are planned in GitHub Issues #1–#4. Det
 | BR-06 | F-03 | 1 | AC-12 / TEST-12 (atomicity and competing stock orders) |
 | BR-07 | F-01, F-03 | 1 | AC-03, AC-14 / TEST-03, TEST-14 (anonymous/other customer) |
 | BR-08 | F-01, F-04 | 1, Lab 7 | AC-04, AC-16–AC-18 / TEST-04, TEST-16–TEST-18 (Sprint 1); `L7-F04-AC01`–`AC05` / `L7-F04-T01`–`T05` (Lab 7 v0.2 prep estimate validation, atomic state transition, repeat 409 `ORDER_NOT_PENDING`) |
-| BR-09 | F-05 | 2 | Operator-only menu mutation tests |
-| BR-10 | F-06 | 2 | Pending cancellation and no duplicate stock restoration |
-| BR-11 | F-07 | 2 | Valid, skipped, repeated, backward transitions |
-| BR-12 | F-08 | 2 | Simulated payment and wrong-role rejection |
-| BR-13 | F-09 | 3 | Sales summary counts only paid-and-completed orders |
+| BR-09 | F-05 | 2 | See §6 for the contract AC, STS cases, and current status. |
+| BR-10 | F-06 | 2 | See §6 for the contract AC, STS cases, and current status. |
+| BR-11 | F-07 | 2 | See §6 for the contract AC, STS cases, and current status. |
+| BR-12 | F-08 | 2 | See §6 for the contract AC, STS cases, and current status. |
+| BR-13 | F-09 (depends on F-06–F-08) | 3 | See §6 for the reporting integration case. |
 
 ---
 
@@ -83,4 +83,76 @@ The following compact impact table cross-references requirements, specification 
 | F-04 (Sprint 1 v0.1) | AC-15–AC-19 | TEST-15–TEST-19 | Sprint 1 Baseline (Pass) |
 | **F-04 (Lab 7 v0.2)** | **L7-F04-AC01–L7-F04-AC07** | **L7-F04-T01–L7-F04-T07** | **Issue #48 revised contract (Designed / Not run)** |
 
-**Coverage status:** All baseline and Lab 7 revised requirements are assigned to features and test IDs. **New Lab 7 tests are Designed / Not run.** Actual test execution records will be updated upon implementation in later lab parts.
+**Sprint 1 and Lab 7 coverage:** All baseline and Lab 7 revised requirements are assigned to features and test IDs. **New Lab 7 tests are Designed / Not run.** Actual test execution records will be updated upon implementation in later lab parts.
+
+
+---
+
+## 6. Deliverable 2 Sprint 2 Requirements and Test Coverage
+
+The [F-05](sprints/sprint-2/f05-menu-stock-admin.md), [F-06](sprints/sprint-2/f06-cancellation.md), [F-07](sprints/sprint-2/f07-fulfillment.md), and [F-08](sprints/sprint-2/f08-simulated-payment.md) contracts define the acceptance criteria, cases, and expected outcomes. Responsibilities below refer to planned changes in the existing layers. Each row links the requirement to the relevant portion of the contract. The AC-to-case index retains the associations recorded by each contract.
+
+| Requirement | Feature | Sprint | Acceptance criteria | STS cases | Planned implementation responsibility | Current implementation status | Actual test status |
+|---|---|---|---|---|---|---|---|
+| FR-06 | F-05 | 2 | `S2-F05-AC01`, `S2-F05-AC02`, `S2-F05-AC03`, `S2-F05-AC04`, `S2-F05-AC05`, `S2-F05-AC06` | `S2-F05-T01`, `S2-F05-T02`, `S2-F05-T03`, `S2-F05-T04`, `S2-F05-T05`, `S2-F05-T06`, `S2-F05-T07`, `S2-F05-T08`, `S2-F05-T09`, `S2-F05-T10` | React operator menu and public menu, Express catalog endpoints, PostgreSQL catalog and checkout integration | Contract reviewed; Implementation not yet verified | Designed / Not run |
+| BR-09 | F-05 | 2 | `S2-F05-AC03`, `S2-F05-AC04`, `S2-F05-AC06` | `S2-F05-T03`, `S2-F05-T04`, `S2-F05-T05`, `S2-F05-T06`, `S2-F05-T09`, `S2-F05-T10` | Operator role guard, atomic stock endpoint, and server-confirmed form feedback | Contract reviewed; Implementation not yet verified | Designed / Not run |
+| FR-07 | F-06 | 2 | `F06-AC01`, `F06-AC02`, `F06-AC03`, `F06-AC04`, `F06-AC05`, `F06-AC06`, `F06-AC07` | `F06-T01`, `F06-T02`, `F06-T03`, `F06-T04`, `F06-T05`, `F06-T06`, `F06-T07` | Customer order and Operator queue actions, customer/operator cancellation routes, PostgreSQL transaction | Contract reviewed; Implementation not yet verified | Designed / Not run |
+| BR-10 | F-06 | 2 | `F06-AC03`, `F06-AC04`, `F06-AC06`, `F06-AC07` | `F06-T01`, `F06-T02`, `F06-T04`, `F06-T05`, `F06-T06`, `F06-T07` | Pending-only conditional transition, atomic restoration and rollback, preservation of stored order data | Contract reviewed; Implementation not yet verified | Designed / Not run |
+| BR-10 | F-05 | 2 | `S2-F05-AC04` | `S2-F05-T05`, `S2-F05-T06` | Stock adjustment checks pending reservation headroom under lock and allows restoration for inactive items | Contract reviewed; Implementation not yet verified | Designed / Not run |
+| FR-08 | F-07 | 2 | `F07-AC01`, `F07-AC02`, `F07-AC03`, `F07-AC04`, `F07-AC05`, `F07-AC06`, `F07-AC07` | `F07-T01`, `F07-T02`, `F07-T03`, `F07-T04`, `F07-T05`, `F07-T06`, `F07-T07`, `F07-T08` | Operator queue and mutation API, owner-scoped reads and estimate display, PostgreSQL status update | Contract reviewed; Implementation not yet verified | Designed / Not run |
+| BR-11 | F-07 | 2 | `F07-AC01`, `F07-AC02`, `F07-AC04`, `F07-AC06`, `F07-AC07` | `F07-T01`, `F07-T02`, `F07-T05`, `F07-T07`, `F07-T08` | Conditional adjacent transitions, estimate preservation, and completion while unpaid | Contract reviewed; Implementation not yet verified | Designed / Not run |
+| BR-11 | F-08 | 2 | `S2-F08-AC04` | `S2-F08-T01`, `S2-F08-T04`, `S2-F08-T06`, `S2-F08-T07` | Payment and fulfillment handlers use field-specific writes so both can succeed concurrently | Contract reviewed; Implementation not yet verified | Designed / Not run |
+| FR-09 | F-08 | 2 | `S2-F08-AC01`, `S2-F08-AC02`, `S2-F08-AC05` | `S2-F08-T01`, `S2-F08-T02`, `S2-F08-T03`, `S2-F08-T06`, `S2-F08-T07` | Operator queue badges and simulated action, Express payment mutation, PostgreSQL payment flag | Contract reviewed; Implementation not yet verified | Designed / Not run |
+| BR-12 | F-08 | 2 | `S2-F08-AC01`, `S2-F08-AC02`, `S2-F08-AC03`, `S2-F08-AC04`, `S2-F08-AC05` | `S2-F08-T01`, `S2-F08-T02`, `S2-F08-T03`, `S2-F08-T04`, `S2-F08-T05`, `S2-F08-T06`, `S2-F08-T07` | Operator-only, one-way payment write filtered by saved order and payment state, owner-scoped reads, local-only flag | Contract reviewed; Implementation not yet verified | Designed / Not run |
+| NFR-01 | F-05 | 2 | `S2-F05-AC03` | `S2-F05-T03`, `S2-F05-T04`, `S2-F05-T10` | Session and Operator guard on the admin catalog | Contract reviewed; Implementation not yet verified | Designed / Not run |
+| NFR-01 | F-06 | 2 | `F06-AC02`, `F06-AC05` | `F06-T02`, `F06-T03` | Authenticated role boundaries, transactional customer ownership check, privacy-preserving errors | Contract reviewed; Implementation not yet verified | Designed / Not run |
+| NFR-01 | F-07 | 2 | `F07-AC03`, `F07-AC05` | `F07-T03`, `F07-T04`, `F07-T06` | Operator-only writes and owner-scoped customer reads | Contract reviewed; Implementation not yet verified | Designed / Not run |
+| NFR-01 | F-08 | 2 | `S2-F08-AC03`, `S2-F08-AC04` | `S2-F08-T01`, `S2-F08-T04`, `S2-F08-T05`, `S2-F08-T06`, `S2-F08-T07` | Operator payment guard, customer ownership, and safe validation errors | Contract reviewed; Implementation not yet verified | Designed / Not run |
+| NFR-02 | F-05 | 2 | `S2-F05-AC04`, `S2-F05-AC05` | `S2-F05-T05`, `S2-F05-T06`, `S2-F05-T07`, `S2-F05-T08` | PostgreSQL transaction and coordinated stock locks, server price snapshots, integer bounds and rollback | Contract reviewed; Implementation not yet verified | Designed / Not run |
+| NFR-02 | F-06 | 2 | `F06-AC03`, `F06-AC04`, `F06-AC06`, `F06-AC07` | `F06-T01`, `F06-T02`, `F06-T04`, `F06-T05`, `F06-T06`, `F06-T07` | Atomic restoration from stored order lines, conflict handling, and rollback | Contract reviewed; Implementation not yet verified | Designed / Not run |
+| NFR-02 | F-07 | 2 | `F07-AC04`, `F07-AC06`, `F07-AC07` | `F07-T01`, `F07-T05`, `F07-T07`, `F07-T08` | Conditional updates preserve saved estimate, order data, inventory, and payment | Contract reviewed; Implementation not yet verified | Designed / Not run |
+| NFR-02 | F-08 | 2 | `S2-F08-AC02`, `S2-F08-AC04` | `S2-F08-T01`, `S2-F08-T02`, `S2-F08-T03`, `S2-F08-T04`, `S2-F08-T06`, `S2-F08-T07` | Conditional update preserves unrelated fields while fulfillment advances | Contract reviewed; Implementation not yet verified | Designed / Not run |
+| NFR-04 | F-05 | 2 | `S2-F05-AC01` | `S2-F05-T01`, `S2-F05-T04`, `S2-F05-T10` | Durable catalog fields and stock in PostgreSQL. T01 explicitly exercises application restart | Contract reviewed; Implementation not yet verified | Designed / Not run |
+| NFR-04 | F-06 | 2 | `F06-AC01`, `F06-AC03`, `F06-AC07` | `F06-T01`, `F06-T02`, `F06-T07` | Persist cancellation, restored inventory, and retained details for subsequent owner reads | Contract reviewed; Implementation not yet verified | Designed / Not run |
+| NFR-04 | F-07 | 2 | `F07-AC01`, `F07-AC05`, `F07-AC06` | `F07-T01`, `F07-T06`, `F07-T07`, `F07-T08` | Persist changed status and retain the ready estimate for subsequent API reads and UI refresh | Contract reviewed; Implementation not yet verified | Designed / Not run |
+| NFR-04 | F-08 | 2 | `S2-F08-AC01` | `S2-F08-T01` | Persist the payment flag and retrieve it after application restart | Contract reviewed; Implementation not yet verified | Designed / Not run |
+| FR-02, BR-03 | F-05 | 2 | `S2-F05-AC02` | `S2-F05-T01`, `S2-F05-T02` | Public menu publication and sold-out display, checkout activation and availability checks | Contract reviewed; Implementation not yet verified | Designed / Not run |
+| BR-04, BR-05 | F-05 | 2 | `S2-F05-AC05` | `S2-F05-T07`, `S2-F05-T08` | Authoritative prices from reservation row versions, stored snapshots, and bounded totals | Contract reviewed; Implementation not yet verified | Designed / Not run |
+| BR-06 | F-05 | 2 | `S2-F05-AC04`, `S2-F05-AC05` | `S2-F05-T05`, `S2-F05-T06`, `S2-F05-T07`, `S2-F05-T08` | Atomic checkout, competing stock edits, and overflow rollback | Contract reviewed; Implementation not yet verified | Designed / Not run |
+| FR-04, BR-07 | F-08 | 2 | `S2-F08-AC04` | `S2-F08-T01`, `S2-F08-T04`, `S2-F08-T06`, `S2-F08-T07` | Owner-scoped payment read and retained order details | Contract reviewed; Implementation not yet verified | Designed / Not run |
+| BR-13 | F-08 → F-09 | 3 (dependency defined in Sprint 2) | `S2-F08-AC06` | `S2-F08-T08` | F-09 sales summary uses both saved states and stored prices. Cancelled orders are excluded | Planned with F-09 | Designed / Not run |
+
+### Contract AC-to-case index
+
+| Feature | Acceptance criterion | STS cases |
+|---|---|---|
+| F-05 | `S2-F05-AC01` | `S2-F05-T01`, `S2-F05-T04`, `S2-F05-T10` |
+| F-05 | `S2-F05-AC02` | `S2-F05-T01`, `S2-F05-T02` |
+| F-05 | `S2-F05-AC03` | `S2-F05-T03`, `S2-F05-T04`, `S2-F05-T10` |
+| F-05 | `S2-F05-AC04` | `S2-F05-T05`, `S2-F05-T06` |
+| F-05 | `S2-F05-AC05` | `S2-F05-T07`, `S2-F05-T08` |
+| F-05 | `S2-F05-AC06` | `S2-F05-T09` |
+| F-06 | `F06-AC01` | `F06-T01` |
+| F-06 | `F06-AC02` | `F06-T02` |
+| F-06 | `F06-AC03` | `F06-T01`, `F06-T02` |
+| F-06 | `F06-AC04` | `F06-T04`, `F06-T05` |
+| F-06 | `F06-AC05` | `F06-T03` |
+| F-06 | `F06-AC06` | `F06-T06` |
+| F-06 | `F06-AC07` | `F06-T07` |
+| F-07 | `F07-AC01` | `F07-T01` |
+| F-07 | `F07-AC02` | `F07-T02` |
+| F-07 | `F07-AC03` | `F07-T03`, `F07-T04` |
+| F-07 | `F07-AC04` | `F07-T05` |
+| F-07 | `F07-AC05` | `F07-T06` |
+| F-07 | `F07-AC06` | `F07-T07`, `F07-T08` |
+| F-07 | `F07-AC07` | `F07-T01`, `F07-T07` |
+| F-08 | `S2-F08-AC01` | `S2-F08-T01` |
+| F-08 | `S2-F08-AC02` | `S2-F08-T02`, `S2-F08-T03`, `S2-F08-T06` |
+| F-08 | `S2-F08-AC03` | `S2-F08-T04`, `S2-F08-T05` |
+| F-08 | `S2-F08-AC04` | `S2-F08-T01`, `S2-F08-T04`, `S2-F08-T06`, `S2-F08-T07` |
+| F-08 | `S2-F08-AC05` | `S2-F08-T07` |
+| F-08 | `S2-F08-AC06` | `S2-F08-T08` |
+
+The four contracts define 26 acceptance criteria and 33 STS cases. Of these, 32 cases are planned for Sprint 2 and `S2-F08-T08` is carried into Sprint 3 for F-09's BR-13 reporting check. All 33 cases are **Designed / Not run**.
+
+The F-06 and F-07 cases check persistence through database assertions and subsequent reads or refresh. Their designs have no explicit application restart step. F-07's estimate cases have no explicit elapsed-time step to check that passing the estimate never advances the order. `S2-F05-T06` checks stock adjustment followed by cancellation at the stock limit. The contract cases do not force an overlap between a stock adjustment and a cancellation.
