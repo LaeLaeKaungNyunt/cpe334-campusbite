@@ -95,6 +95,19 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     res.status(400).json({ error: { code: 'INVALID_ORDER', message: 'Order request must be valid JSON.' } });
     return;
   }
+  if (
+    _req.method === 'PATCH' &&
+    /^\/api\/v1\/operator\/orders\/[^/]+\/status\/?$/i.test(_req.path) &&
+    typeof err === 'object' &&
+    err !== null &&
+    'type' in err &&
+    err.type === 'entity.parse.failed'
+  ) {
+    res.status(400).json({
+      error: { code: 'INVALID_FULFILLMENT_STATUS', message: 'Order status request must be valid JSON.' },
+    });
+    return;
+  }
 
   const errorMessage = err instanceof Error ? err.message : 'Unknown error';
   console.error('[server error]', errorMessage);
