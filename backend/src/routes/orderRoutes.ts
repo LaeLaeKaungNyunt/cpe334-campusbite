@@ -1,10 +1,11 @@
 import { Router, type Request } from 'express';
-import { OrderStatus, PaymentStatus, UserRole } from '@prisma/client';
+import { OrderStatus, PaymentStatus, Prisma, UserRole } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { requireRole } from '../middleware/auth.js';
 
 export const orderRouter = Router();
 const ORDER_UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const POSTGRES_INT_MAX = 2_147_483_647;
 
 const invalidOrder = (res: Parameters<Parameters<typeof orderRouter.post>[1]>[1]) =>
   res.status(400).json({ error: { code: 'INVALID_ORDER', message: 'Order request is invalid.' } });
@@ -31,9 +32,10 @@ function parseItems(body: unknown): RequestedItem[] | null {
     // follow RFC 4122's version/variant bit conventions.
     if (typeof item.menuItemId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(item.menuItemId)) return null;
     if (!Number.isSafeInteger(item.quantity) || (item.quantity as number) <= 0) return null;
-    if (seen.has(item.menuItemId)) return null;
-    seen.add(item.menuItemId);
-    parsed.push({ menuItemId: item.menuItemId, quantity: item.quantity as number });
+    const menuItemId = item.menuItemId.toLowerCase();
+    if (seen.has(menuItemId)) return null;
+    seen.add(menuItemId);
+    parsed.push({ menuItemId, quantity: item.quantity as number });
   }
   return parsed;
 }
@@ -47,35 +49,30 @@ orderRouter.post('/', requireRole(UserRole.CUSTOMER), async (req, res, next) => 
   if (!requestedItems) return invalidOrder(res);
 
   try {
-    // Stable ordering reduces lock-order inversions when two carts overlap.
-    const orderedLines = [...requestedItems].sort((a, b) => a.menuItemId.localeCompare(b.menuItemId));
+    // Match cancellation's ascending UUID order when acquiring menu row locks.
+    const orderedLines = [...requestedItems].sort((a, b) => a.menuItemId.localeCompare(b.menuItemId, 'en'));
     const created = await prisma.$transaction(async (tx) => {
-      const menuItems = await tx.menuItem.findMany({
-        where: { id: { in: orderedLines.map((line) => line.menuItemId) } },
-        select: { id: true, priceSatang: true, isActive: true },
-      });
-      const byId = new Map(menuItems.map((item) => [item.id, item]));
       const pricedLines: Array<RequestedItem & { unitPriceSatang: number; lineTotalSatang: number }> = [];
 
       for (const line of orderedLines) {
-        const item = byId.get(line.menuItemId);
-        if (!item || !item.isActive) throw new StockUnavailableError();
+        if (line.quantity > POSTGRES_INT_MAX) throw new StockUnavailableError();
 
-        // The predicate is checked by PostgreSQL as part of the write. Concurrent
-        // requests cannot both decrement a row below zero, even if they read it together.
-        const reservation = await tx.menuItem.updateMany({
+        // PostgreSQL rechecks availability after waiting for a competing write.
+        // RETURNING supplies the price from the same row that reserved the stock.
+        const [reserved] = await tx.menuItem.updateManyAndReturn({
           where: { id: line.menuItemId, isActive: true, stockQuantity: { gte: line.quantity } },
           data: { stockQuantity: { decrement: line.quantity } },
+          select: { priceSatang: true },
         });
-        if (reservation.count !== 1) throw new StockUnavailableError();
+        if (!reserved) throw new StockUnavailableError();
 
-        const lineTotalSatang = item.priceSatang * line.quantity;
-        if (!Number.isSafeInteger(lineTotalSatang)) throw new InvalidOrderError();
-        pricedLines.push({ ...line, unitPriceSatang: item.priceSatang, lineTotalSatang });
+        const lineTotalSatang = reserved.priceSatang * line.quantity;
+        if (lineTotalSatang > POSTGRES_INT_MAX) throw new InvalidOrderError();
+        pricedLines.push({ ...line, unitPriceSatang: reserved.priceSatang, lineTotalSatang });
       }
 
       const totalSatang = pricedLines.reduce((total, line) => total + line.lineTotalSatang, 0);
-      if (!Number.isSafeInteger(totalSatang)) throw new InvalidOrderError();
+      if (totalSatang > POSTGRES_INT_MAX) throw new InvalidOrderError();
 
       return tx.order.create({
         data: {
@@ -94,7 +91,7 @@ orderRouter.post('/', requireRole(UserRole.CUSTOMER), async (req, res, next) => 
         },
         include: { items: { orderBy: { menuItemId: 'asc' } } },
       });
-    });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
     return res.status(201).json({ data: created });
   } catch (error) {
     if (error instanceof StockUnavailableError) {
