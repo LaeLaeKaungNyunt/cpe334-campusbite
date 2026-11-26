@@ -41,6 +41,12 @@ export interface OrderMutationResult {
   updatedAt: string;
 }
 
+export class OperatorOrderError extends Error {
+  constructor(readonly status: number, message: string) {
+    super(message);
+  }
+}
+
 async function patchOrder<T>(path: string, body?: unknown): Promise<T> {
   const response = await fetch(path, {
     method: 'PATCH',
@@ -50,7 +56,7 @@ async function patchOrder<T>(path: string, body?: unknown): Promise<T> {
   });
   const result = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new Error(result?.error?.message || `Order update failed (HTTP ${response.status}).`);
+    throw new OperatorOrderError(response.status, result?.error?.message || `Order update failed (HTTP ${response.status}).`);
   }
   return result.data as T;
 }
@@ -95,4 +101,8 @@ export async function cancelOperatorOrder(orderId: string): Promise<{ id: string
 
 export async function updateOperatorOrderStatus(orderId: string, status: 'PREPARING' | 'READY' | 'COMPLETED'): Promise<OrderMutationResult> {
   return patchOrder(`/api/v1/operator/orders/${encodeURIComponent(orderId)}/status`, { status });
+}
+
+export function recordSimulatedPayment(orderId: string): Promise<{ id: string; paymentStatus: 'PAID_SIMULATED'; updatedAt: string }> {
+  return patchOrder(`/api/v1/operator/orders/${encodeURIComponent(orderId)}/payment`, { paymentStatus: 'PAID_SIMULATED' });
 }
