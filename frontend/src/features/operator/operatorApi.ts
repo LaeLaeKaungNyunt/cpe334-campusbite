@@ -34,6 +34,27 @@ export interface AcceptOrderResult {
   updatedAt: string;
 }
 
+export interface OrderMutationResult {
+  id: string;
+  status: OperatorOrder['status'];
+  estimatedReadyAt: string | null;
+  updatedAt: string;
+}
+
+async function patchOrder<T>(path: string, body?: unknown): Promise<T> {
+  const response = await fetch(path, {
+    method: 'PATCH',
+    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const result = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(result?.error?.message || `Order update failed (HTTP ${response.status}).`);
+  }
+  return result.data as T;
+}
+
 export async function fetchOperatorOrders(signal?: AbortSignal): Promise<OperatorOrder[]> {
   const response = await fetch('/api/v1/operator/orders', {
     credentials: 'include',
@@ -66,4 +87,12 @@ export async function acceptOperatorOrder(orderId: string, estimatedPrepMinutes:
 
   const json = await response.json();
   return json.data;
+}
+
+export async function cancelOperatorOrder(orderId: string): Promise<{ id: string; status: 'CANCELLED'; updatedAt: string }> {
+  return patchOrder(`/api/v1/operator/orders/${encodeURIComponent(orderId)}/cancel`);
+}
+
+export async function updateOperatorOrderStatus(orderId: string, status: 'PREPARING' | 'READY' | 'COMPLETED'): Promise<OrderMutationResult> {
+  return patchOrder(`/api/v1/operator/orders/${encodeURIComponent(orderId)}/status`, { status });
 }

@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma.js';
 import { requireRole } from '../middleware/auth.js';
 
 export const orderRouter = Router();
+const ORDER_UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const invalidOrder = (res: Parameters<Parameters<typeof orderRouter.post>[1]>[1]) =>
   res.status(400).json({ error: { code: 'INVALID_ORDER', message: 'Order request is invalid.' } });
@@ -118,7 +119,7 @@ orderRouter.get('/', requireRole(UserRole.CUSTOMER), async (req, res, next) => {
 });
 
 orderRouter.get('/:id', requireRole(UserRole.CUSTOMER), async (req, res, next) => {
-  if (typeof req.params.id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(req.params.id)) {
+  if (!ORDER_UUID_REGEX.test(req.params.id)) {
     return res.status(404).json({ error: { code: 'ORDER_NOT_FOUND', message: 'Order not found.' } });
   }
   try {
@@ -128,6 +129,54 @@ orderRouter.get('/:id', requireRole(UserRole.CUSTOMER), async (req, res, next) =
     });
     if (!order) return res.status(404).json({ error: { code: 'ORDER_NOT_FOUND', message: 'Order not found.' } });
     return res.status(200).json({ data: order });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+orderRouter.patch('/:id/cancel', requireRole(UserRole.CUSTOMER), async (req, res, next) => {
+  const id = req.params.id;
+  if (!ORDER_UUID_REGEX.test(id)) {
+    return res.status(404).json({ error: { code: 'ORDER_NOT_FOUND', message: 'Order not found.' } });
+  }
+
+  try {
+    const outcome = await prisma.$transaction(async (tx) => {
+      const changed = await tx.order.updateMany({
+        where: { id, customerId: customerId(req), status: OrderStatus.PENDING },
+        data: { status: OrderStatus.CANCELLED },
+      });
+
+      if (changed.count === 0) {
+        const existing = await tx.order.findFirst({
+          where: { id, customerId: customerId(req) },
+          select: { id: true, status: true },
+        });
+        return existing ? { kind: 'conflict' as const } : { kind: 'not-found' as const };
+      }
+
+      const items = await tx.orderItem.findMany({ where: { orderId: id }, orderBy: { menuItemId: 'asc' } });
+      for (const item of items) {
+        await tx.menuItem.update({
+          where: { id: item.menuItemId },
+          data: { stockQuantity: { increment: item.quantity } },
+        });
+      }
+
+      const updated = await tx.order.findUniqueOrThrow({
+        where: { id },
+        select: { id: true, status: true, updatedAt: true },
+      });
+      return { kind: 'success' as const, updated };
+    });
+
+    if (outcome.kind === 'not-found') {
+      return res.status(404).json({ error: { code: 'ORDER_NOT_FOUND', message: 'Order not found.' } });
+    }
+    if (outcome.kind === 'conflict') {
+      return res.status(409).json({ error: { code: 'ORDER_NOT_PENDING', message: 'Only pending orders can be cancelled.' } });
+    }
+    return res.status(200).json({ data: outcome.updated });
   } catch (error) {
     return next(error);
   }
