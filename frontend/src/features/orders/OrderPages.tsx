@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { fetchMenuItems, type MenuItem } from '../menu/menuApi';
 import {
   fetchCurrentUser,
@@ -7,10 +7,12 @@ import {
   cancelCustomerOrder,
   formatEstimatedReadyTime,
   formatOrderPrice,
+  orderStatuses,
   readCart,
   saveCart,
   submitOrder,
   type CustomerOrder,
+  type OrderFilters,
 } from './ordersApi';
 
 type User = { id: string; email: string; role: 'CUSTOMER' | 'OPERATOR' };
@@ -116,42 +118,134 @@ function OrderCard({ order, onCancel, cancellingId }: {
   </li>;
 }
 
-export function OrdersPage() {
-  const [user, setUser] = useState<User | null>(null);
+const fullOrderIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function CustomerOrderHistory() {
+  const [status, setStatus] = useState('');
+  const [orderId, setOrderId] = useState('');
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [filtered, setFiltered] = useState(false);
+  const [validationError, setValidationError] = useState('');
+  const [requestError, setRequestError] = useState('');
+  const [cancelError, setCancelError] = useState('');
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const appliedFilters = useRef<OrderFilters>({});
+  const listRequest = useRef<AbortController>();
+
+  const refreshOrders = useCallback(async () => {
+    listRequest.current?.abort();
+    const controller = new AbortController();
+    listRequest.current = controller;
+    setLoading(true);
+    setRequestError('');
+    try {
+      const results = await fetchOrders(appliedFilters.current, controller.signal);
+      if (!controller.signal.aborted) setOrders(results);
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        setRequestError(error instanceof Error && !(error instanceof SyntaxError) ? error.message : 'Could not load your orders. Please try again.');
+      }
+    } finally {
+      if (!controller.signal.aborted) setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshOrders();
+    return () => listRequest.current?.abort();
+  }, [refreshOrders]);
+
+  function search(filters: OrderFilters) {
+    appliedFilters.current = filters;
+    setFiltered(Boolean(filters.status || filters.orderId));
+    setValidationError('');
+    setCancelError('');
+    setOrders([]);
+    void refreshOrders();
+  }
+
+  function applyFilters(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (orderId && (orderId.length !== 36 || !fullOrderIdPattern.test(orderId))) {
+      setValidationError('Enter the full order ID in UUID format. You can find it on the order details page.');
+      return;
+    }
+    search({ status, orderId });
+  }
+
   async function handleCancel(order: CustomerOrder) {
     if (cancellingId !== null || !window.confirm('Cancel this pending order?')) return;
     setCancellingId(order.id);
-    setError('');
+    setCancelError('');
     try {
       const result = await cancelCustomerOrder(order.id);
-      setOrders((current) => current.map((entry) => entry.id === result.id ? { ...entry, status: result.status } : entry));
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Could not cancel this order. Refresh and try again.');
+      const { status: activeStatus } = appliedFilters.current;
+      setOrders((current) => activeStatus && activeStatus !== result.status
+        ? current.filter((entry) => entry.id !== result.id)
+        : current.map((entry) => entry.id === result.id ? { ...entry, status: result.status } : entry));
+    } catch (error) {
+      setCancelError(error instanceof Error ? error.message : 'Could not cancel this order. Refresh and try again.');
     } finally {
-      try {
-        setOrders(await fetchOrders());
-      } catch {
-        setError((current) => current || 'Could not refresh your orders.');
-      }
+      await refreshOrders();
       setCancellingId(null);
     }
   }
+
+  return <>
+    <form className="order-panel order-filters" aria-label="Filter orders" onSubmit={applyFilters}>
+      <label>Status
+        <select value={status} onChange={(event) => setStatus(event.target.value)}>
+          <option value="">All statuses</option>
+          {orderStatuses.map((value) => <option key={value} value={value}>{value}</option>)}
+        </select>
+      </label>
+      <label>Full order ID
+        <input type="text" value={orderId} onChange={(event) => {
+          setOrderId(event.target.value);
+          setValidationError('');
+        }} autoComplete="off" spellCheck={false} aria-invalid={Boolean(validationError)} aria-describedby={validationError ? 'order-id-error' : undefined} />
+      </label>
+      {validationError && <div id="order-id-error" className="order-error" role="alert">{validationError}</div>}
+      <div className="order-actions">
+        <button className="btn btn-outline" type="button" onClick={() => {
+          setStatus('');
+          setOrderId('');
+          search({});
+        }}>Clear</button>
+        <button className="btn btn-primary" type="submit">Apply</button>
+      </div>
+    </form>
+    {loading && <p role="status">Loading your orders…</p>}
+    {requestError && <p className="order-error" role="alert">{requestError}</p>}
+    {cancelError && <p className="order-error" role="alert">{cancelError}</p>}
+    {orders.length > 0 && <ul className="saved-orders">{orders.map((order) => <OrderCard key={order.id} order={order} onCancel={handleCancel} cancellingId={cancellingId} />)}</ul>}
+    {!loading && !requestError && orders.length === 0 && <section className="order-panel">
+      {filtered ? <p role="status">No orders match your filters.</p> : <><p>You have not placed an order yet.</p><a className="btn btn-primary" href="/menu">Browse menu</a></>}
+    </section>}
+  </>;
+}
+
+export function OrdersPage() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   useEffect(() => {
-    fetchCurrentUser().then(async (current) => {
-      setUser(current);
-      if (current?.role === 'CUSTOMER') setOrders(await fetchOrders());
-    }).catch((requestError: unknown) => setError(requestError instanceof Error ? requestError.message : 'Could not load your orders.'))
-      .finally(() => setLoading(false));
+    let active = true;
+    fetchCurrentUser().then((current) => {
+      if (active) setUser(current);
+    }).catch((requestError: unknown) => {
+      if (active) setError(requestError instanceof Error ? requestError.message : 'Could not load your orders.');
+    }).finally(() => {
+      if (active) setLoading(false);
+    });
+    return () => { active = false; };
   }, []);
   return <PageFrame><section className="order-heading"><p className="eyebrow">Your history</p><h1>My orders</h1><p>Saved orders and their current statuses.</p></section>
     {loading && <p role="status">Loading your orders…</p>}{error && <p className="order-error" role="alert">{error}</p>}
     {!loading && !error && !user && <SignInNotice />}
     {!loading && !error && user?.role === 'OPERATOR' && <section className="order-panel"><p>Order history is available to Customer accounts.</p></section>}
-    {!loading && user?.role === 'CUSTOMER' && (orders.length ? <ul className="saved-orders">{orders.map((order) => <OrderCard key={order.id} order={order} onCancel={handleCancel} cancellingId={cancellingId} />)}</ul> : !error && <section className="order-panel"><p>You have not placed an order yet.</p><a className="btn btn-primary" href="/menu">Browse menu</a></section>)}
+    {!loading && user?.role === 'CUSTOMER' && <CustomerOrderHistory />}
   </PageFrame>;
 }
 
