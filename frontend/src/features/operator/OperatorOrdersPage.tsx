@@ -3,6 +3,8 @@ import { formatEstimatedReadyTime } from '../orders/ordersApi';
 import {
   fetchOperatorOrders,
   acceptOperatorOrder,
+  cancelOperatorOrder,
+  updateOperatorOrderStatus,
   type OperatorOrder,
 } from './operatorApi';
 
@@ -91,6 +93,46 @@ export function OperatorOrdersPage() {
       setConfirmationMessage(`Order #${orderId.slice(0, 8)} accepted successfully.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to accept order.');
+    } finally {
+      acceptanceInFlight.current = false;
+      setAcceptingId(null);
+    }
+  }
+
+  async function handleCancel(orderId: string) {
+    if (loading || acceptanceInFlight.current) return;
+    acceptanceInFlight.current = true;
+    setAcceptingId(orderId);
+    setConfirmationMessage(null);
+    setError(null);
+    try {
+      const result = await cancelOperatorOrder(orderId);
+      setOrders((prev) => prev.map((order) => order.id === result.id
+        ? { ...order, status: result.status, updatedAt: result.updatedAt }
+        : order));
+      setConfirmationMessage(`Order #${orderId.slice(0, 8)} cancelled.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to cancel order. Refresh the list and try again.');
+    } finally {
+      acceptanceInFlight.current = false;
+      setAcceptingId(null);
+    }
+  }
+
+  async function handleFulfillment(orderId: string, status: 'PREPARING' | 'READY' | 'COMPLETED') {
+    if (loading || acceptanceInFlight.current) return;
+    acceptanceInFlight.current = true;
+    setAcceptingId(orderId);
+    setConfirmationMessage(null);
+    setError(null);
+    try {
+      const result = await updateOperatorOrderStatus(orderId, status);
+      setOrders((prev) => prev.map((order) => order.id === result.id
+        ? { ...order, status: result.status, estimatedReadyAt: result.estimatedReadyAt, updatedAt: result.updatedAt }
+        : order));
+      setConfirmationMessage(`Order #${orderId.slice(0, 8)} is now ${result.status}.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update order. Refresh the list and try again.');
     } finally {
       acceptanceInFlight.current = false;
       setAcceptingId(null);
@@ -294,6 +336,8 @@ export function OperatorOrdersPage() {
                 {orders.map((order) => {
                   const isPending = order.status === 'PENDING';
                   const isAccepted = order.status === 'ACCEPTED';
+                  const isPreparing = order.status === 'PREPARING';
+                  const isReady = order.status === 'READY';
                   const isSubmitting = acceptingId === order.id;
                   const estimatedPrepMinutes = prepMinutesByOrder[order.id] ?? 0;
 
@@ -418,6 +462,9 @@ export function OperatorOrdersPage() {
                             >
                               {isSubmitting ? 'Accepting…' : 'Accept Order'}
                             </button>
+                            <button type="button" className="btn btn-outline btn-sm" onClick={() => handleCancel(order.id)} disabled={orderControlsDisabled}>
+                              {isSubmitting ? 'Updating…' : 'Cancel order'}
+                            </button>
                           </>
                         )}
                         {isAccepted && (
@@ -425,12 +472,15 @@ export function OperatorOrdersPage() {
                             ✓ Accepted &amp; In Kitchen
                           </span>
                         )}
-                        {isAccepted && order.estimatedReadyAt && (
+                        {(isAccepted || isPreparing) && order.estimatedReadyAt && (
                           <span style={{ color: '#4a5568', fontSize: '0.85rem' }}>
                             Estimated ready: <time dateTime={order.estimatedReadyAt}>{formatEstimatedReadyTime(order.estimatedReadyAt)}</time>
                           </span>
                         )}
-                        {!isPending && !isAccepted && (
+                        {isAccepted && <button type="button" className="btn btn-primary btn-sm" onClick={() => handleFulfillment(order.id, 'PREPARING')} disabled={orderControlsDisabled}>{isSubmitting ? 'Updating…' : 'Start preparation'}</button>}
+                        {isPreparing && <button type="button" className="btn btn-primary btn-sm" onClick={() => handleFulfillment(order.id, 'READY')} disabled={orderControlsDisabled}>{isSubmitting ? 'Updating…' : 'Mark ready'}</button>}
+                        {isReady && <button type="button" className="btn btn-primary btn-sm" onClick={() => handleFulfillment(order.id, 'COMPLETED')} disabled={orderControlsDisabled}>{isSubmitting ? 'Updating…' : 'Complete order'}</button>}
+                        {!isPending && !isAccepted && !isPreparing && !isReady && (
                           <span style={{ color: '#718096', fontSize: '0.85rem' }}>
                             Status: {order.status}
                           </span>

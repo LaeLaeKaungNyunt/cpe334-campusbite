@@ -59,6 +59,15 @@ export async function fetchOrder(id: string) {
   return result.data;
 }
 
+export async function cancelCustomerOrder(id: string): Promise<{ id: string; status: 'CANCELLED'; updatedAt: string }> {
+  const response = await fetch(`/api/v1/orders/${encodeURIComponent(id)}/cancel`, {
+    method: 'PATCH',
+    credentials: 'include',
+  });
+  const result = await readResponse<{ data: { id: string; status: 'CANCELLED'; updatedAt: string } }>(response);
+  return result.data;
+}
+
 export function readCart(): Record<string, number> {
   try {
     const parsed: unknown = JSON.parse(sessionStorage.getItem('campusbite-cart') || '{}');
