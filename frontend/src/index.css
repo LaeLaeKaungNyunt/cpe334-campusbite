@@ -530,6 +530,51 @@ footer {
   gap: 0.8rem;
 }
 
+.menu-admin-layout {
+  display: grid;
+  gap: 1rem;
+}
+
+.menu-admin-notice:empty {
+  position: absolute;
+}
+
+.menu-admin-list {
+  list-style: none;
+}
+
+.menu-admin-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 0;
+}
+
+.menu-admin-list li + li,
+.menu-admin-stock {
+  border-top: 1px solid #eee8dc;
+}
+
+.menu-admin-list li div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.menu-admin-fields {
+  border: 0;
+  min-width: 0;
+}
+
+.menu-admin-stock {
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+
+.menu-admin-stock .btn + .btn {
+  margin-left: 0.5rem;
+}
+
 .saved-order a {
   display: flex;
   justify-content: space-between;

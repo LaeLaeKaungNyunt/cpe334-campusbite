@@ -6,6 +6,7 @@ import { authRouter } from './routes/auth.js';
 import { menuRouter } from './routes/menuRoutes.js';
 import { orderRouter } from './routes/orderRoutes.js';
 import { operatorRouter } from './routes/operatorRoutes.js';
+import { operatorMenuRouter } from './routes/operatorMenuRoutes.js';
 import { prisma } from './lib/prisma.js';
 
 export const app = express();
@@ -15,6 +16,8 @@ app.disable('x-powered-by');
 
 // Middleware: parse incoming cookies and JSON bodies
 app.use(cookieParserMiddleware);
+// Authenticate and parse menu administration requests in the dedicated router.
+app.use('/api/v1/operator/menu-items', operatorMenuRouter);
 app.use(express.json());
 
 // Global session resolution middleware

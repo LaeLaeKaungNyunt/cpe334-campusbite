@@ -11,11 +11,13 @@
     "dev": "concurrently -n \"backend,frontend\" -c \"blue,green\" \"npm --workspace=backend run dev\" \"npm --workspace=frontend run dev\"",
     "build": "npm --workspace=backend run build && npm --workspace=frontend run build",
     "test": "npm --workspace=backend run test",
+    "test:f05:browser": "playwright test --config=playwright.f05.config.ts",
     "db:migrate": "npm --workspace=backend run db:migrate",
     "db:seed": "npm --workspace=backend run db:seed",
     "db:check": "npm --workspace=backend run db:check"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "concurrently": "^9.1.2"
   }
 }
