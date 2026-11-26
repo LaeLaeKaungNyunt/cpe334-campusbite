@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { MenuPage } from './features/menu/MenuPage';
+import { OperatorMenuPage } from './features/menuAdmin/OperatorMenuPage';
 import { CartPage, OrderDetailPage, OrdersPage } from './features/orders/OrderPages';
 import { OperatorOrdersPage } from './features/operator/OperatorOrdersPage';
 
@@ -213,9 +214,12 @@ function HomePage() {
             )}
 
             {currentUser?.role === 'OPERATOR' && (
-              <a className="home-menu-link" href="/operator/orders" style={{ color: '#dd6b20' }}>
-                Operator Orders
-              </a>
+              <>
+                <a className="home-menu-link" href="/operator/orders" style={{ color: '#dd6b20' }}>
+                  Operator Orders
+                </a>
+                <a className="home-menu-link" href="/operator/menu">Menu administration</a>
+              </>
             )}
 
             {authLoading ? (
@@ -409,5 +413,6 @@ export function App() {
   const orderMatch = path.match(/^\/orders\/([^/]+)$/);
   if (orderMatch) return <OrderDetailPage orderId={decodeURIComponent(orderMatch[1])} />;
   if (path === '/operator/orders') return <OperatorOrdersPage />;
+  if (path === '/operator/menu') return <OperatorMenuPage />;
   return <HomePage />;
 }
