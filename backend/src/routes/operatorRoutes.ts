@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from 'express';
-import { UserRole, OrderStatus } from '@prisma/client';
+import { UserRole, OrderStatus, PaymentStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { requireRole } from '../middleware/auth.js';
 
@@ -253,5 +253,51 @@ operatorRouter.patch('/orders/:id/status', async (req: Request, res: Response) =
   } catch (error) {
     console.error('[operator/orders/:id/status PATCH error]', error);
     return res.status(500).json({ error: { code: 'INTERNAL_SERVER_ERROR', message: 'Failed to update order status.' } });
+  }
+});
+
+operatorRouter.patch('/orders/:id/payment', async (req, res, next) => {
+  const { id } = req.params;
+  if (!UUID_REGEX.test(id)) {
+    return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Invalid order ID format.' } });
+  }
+
+  const body = req.body;
+  if (
+    typeof body !== 'object' || body === null || Array.isArray(body) ||
+    Object.keys(body).length !== 1 || !Object.hasOwn(body, 'paymentStatus') ||
+    body.paymentStatus !== PaymentStatus.PAID_SIMULATED
+  ) {
+    return res.status(400).json({
+      error: { code: 'INVALID_PAYMENT_STATUS', message: 'Provide only paymentStatus set to PAID_SIMULATED.' },
+    });
+  }
+
+  try {
+    const [saved] = await prisma.order.updateManyAndReturn({
+      where: {
+        id,
+        paymentStatus: PaymentStatus.UNPAID,
+        status: { in: [OrderStatus.ACCEPTED, OrderStatus.PREPARING, OrderStatus.READY, OrderStatus.COMPLETED] },
+      },
+      data: { paymentStatus: PaymentStatus.PAID_SIMULATED },
+      select: { id: true, paymentStatus: true, updatedAt: true },
+    });
+    if (saved) return res.status(200).json({ data: saved });
+
+    const current = await prisma.order.findUnique({ where: { id }, select: { paymentStatus: true } });
+    if (!current) {
+      return res.status(404).json({ error: { code: 'ORDER_NOT_FOUND', message: 'Order not found.' } });
+    }
+    if (current.paymentStatus === PaymentStatus.PAID_SIMULATED) {
+      return res.status(409).json({
+        error: { code: 'PAYMENT_ALREADY_RECORDED', message: 'Simulated payment has already been recorded.' },
+      });
+    }
+    return res.status(409).json({
+      error: { code: 'PAYMENT_ORDER_INELIGIBLE', message: 'This order is not eligible for simulated payment.' },
+    });
+  } catch (error) {
+    return next(error);
   }
 });

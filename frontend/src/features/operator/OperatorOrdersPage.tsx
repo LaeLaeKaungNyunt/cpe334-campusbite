@@ -4,6 +4,8 @@ import {
   fetchOperatorOrders,
   acceptOperatorOrder,
   cancelOperatorOrder,
+  OperatorOrderError,
+  recordSimulatedPayment,
   updateOperatorOrderStatus,
   type OperatorOrder,
 } from './operatorApi';
@@ -15,6 +17,7 @@ interface AuthUser {
 }
 
 const prepTimeOptions = Array.from({ length: 12 }, (_, index) => (index + 1) * 5);
+const payableStatuses: ReadonlySet<OperatorOrder['status']> = new Set(['ACCEPTED', 'PREPARING', 'READY', 'COMPLETED']);
 
 export function OperatorOrdersPage() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
@@ -27,6 +30,7 @@ export function OperatorOrdersPage() {
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
   const acceptanceInFlight = useRef(false);
   const [confirmationMessage, setConfirmationMessage] = useState<string | null>(null);
+  const [paymentRefreshRequired, setPaymentRefreshRequired] = useState(false);
 
   // Check current session
   useEffect(() => {
@@ -61,6 +65,7 @@ export function OperatorOrdersPage() {
     try {
       const data = await fetchOperatorOrders();
       setOrders(data);
+      setPaymentRefreshRequired(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load orders.');
     } finally {
@@ -133,6 +138,37 @@ export function OperatorOrdersPage() {
       setConfirmationMessage(`Order #${orderId.slice(0, 8)} is now ${result.status}.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update order. Refresh the list and try again.');
+    } finally {
+      acceptanceInFlight.current = false;
+      setAcceptingId(null);
+    }
+  }
+
+  async function handlePayment(order: OperatorOrder) {
+    if (loading || acceptanceInFlight.current || paymentRefreshRequired ||
+        order.paymentStatus !== 'UNPAID' || !payableStatuses.has(order.status)) return;
+
+    acceptanceInFlight.current = true;
+    setAcceptingId(order.id);
+    setConfirmationMessage(null);
+    setError(null);
+    try {
+      const result = await recordSimulatedPayment(order.id);
+      setOrders((prev) => prev.map((current) => current.id === result.id
+        ? { ...current, paymentStatus: result.paymentStatus, updatedAt: result.updatedAt }
+        : current));
+      setConfirmationMessage(`Simulated payment recorded for order #${order.id.slice(0, 8)}.`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to record simulated payment.';
+      setError(message);
+      if (err instanceof OperatorOrderError && err.status === 409) {
+        try {
+          setOrders(await fetchOperatorOrders());
+        } catch {
+          setPaymentRefreshRequired(true);
+          setError(`${message} Refresh orders before trying again.`);
+        }
+      }
     } finally {
       acceptanceInFlight.current = false;
       setAcceptingId(null);
@@ -338,6 +374,7 @@ export function OperatorOrdersPage() {
                   const isAccepted = order.status === 'ACCEPTED';
                   const isPreparing = order.status === 'PREPARING';
                   const isReady = order.status === 'READY';
+                  const isUnpaid = order.paymentStatus === 'UNPAID';
                   const isSubmitting = acceptingId === order.id;
                   const estimatedPrepMinutes = prepMinutesByOrder[order.id] ?? 0;
 
@@ -385,6 +422,9 @@ export function OperatorOrdersPage() {
                           <p style={{ fontSize: '0.825rem', color: '#718096', marginTop: '0.2rem' }}>
                             Customer: <strong>{order.customer?.email ?? order.customerId}</strong> ·{' '}
                             {new Date(order.createdAt).toLocaleString()}
+                          </p>
+                          <p style={{ fontSize: '0.85rem', color: '#4a5568' }}>
+                            Payment: <strong>{isUnpaid ? 'Unpaid' : 'Paid (simulated)'}</strong>
                           </p>
                         </div>
 
@@ -480,6 +520,16 @@ export function OperatorOrdersPage() {
                         {isAccepted && <button type="button" className="btn btn-primary btn-sm" onClick={() => handleFulfillment(order.id, 'PREPARING')} disabled={orderControlsDisabled}>{isSubmitting ? 'Updating…' : 'Start preparation'}</button>}
                         {isPreparing && <button type="button" className="btn btn-primary btn-sm" onClick={() => handleFulfillment(order.id, 'READY')} disabled={orderControlsDisabled}>{isSubmitting ? 'Updating…' : 'Mark ready'}</button>}
                         {isReady && <button type="button" className="btn btn-primary btn-sm" onClick={() => handleFulfillment(order.id, 'COMPLETED')} disabled={orderControlsDisabled}>{isSubmitting ? 'Updating…' : 'Complete order'}</button>}
+                        {isUnpaid && payableStatuses.has(order.status) && (
+                          <button
+                            type="button"
+                            className="btn btn-outline btn-sm"
+                            onClick={() => handlePayment(order)}
+                            disabled={orderControlsDisabled || paymentRefreshRequired}
+                          >
+                            Mark paid (simulated)
+                          </button>
+                        )}
                         {!isPending && !isAccepted && !isPreparing && !isReady && (
                           <span style={{ color: '#718096', fontSize: '0.85rem' }}>
                             Status: {order.status}
