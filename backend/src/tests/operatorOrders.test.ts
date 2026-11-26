@@ -152,6 +152,8 @@ afterAll(async () => {
 describe('F-04: Operator Order Management (RED Phase)', () => {
   describe('F-06: Pending order cancellation', () => {
     it('F06-T02: lets OPERATOR cancel a pending customer order and rejects CUSTOMER on operator cancellation', async () => {
+      const latteOriginalStock = (await prisma.menuItem.findUnique({ where: { id: SEED_IDS.icedLatte } }))!.stockQuantity;
+      const sandwichOriginalStock = (await prisma.menuItem.findUnique({ where: { id: SEED_IDS.chickenSandwich } }))!.stockQuantity;
       const created = await request(app)
         .post('/api/v1/orders')
         .set('Cookie', customerCookie)
@@ -159,24 +161,28 @@ describe('F-04: Operator Order Management (RED Phase)', () => {
       expect(created.status).toBe(201);
       const orderId = created.body.data.id as string;
       testOrderIds.push(orderId);
-      const latteAfterReservation = (await prisma.menuItem.findUnique({ where: { id: SEED_IDS.icedLatte } }))!.stockQuantity;
-      const sandwichAfterReservation = (await prisma.menuItem.findUnique({ where: { id: SEED_IDS.chickenSandwich } }))!.stockQuantity;
+      try {
+        const latteAfterReservation = (await prisma.menuItem.findUnique({ where: { id: SEED_IDS.icedLatte } }))!.stockQuantity;
+        const sandwichAfterReservation = (await prisma.menuItem.findUnique({ where: { id: SEED_IDS.chickenSandwich } }))!.stockQuantity;
+        const customerResponse = await request(app)
+          .patch(`/api/v1/operator/orders/${orderId}/cancel`)
+          .set('Cookie', customerCookie);
+        expect(customerResponse.status).toBe(403);
+        expect((await prisma.order.findUnique({ where: { id: orderId } }))!.status).toBe(OrderStatus.PENDING);
 
-      const customerResponse = await request(app)
-        .patch(`/api/v1/operator/orders/${orderId}/cancel`)
-        .set('Cookie', customerCookie);
-      expect(customerResponse.status).toBe(403);
-      expect((await prisma.order.findUnique({ where: { id: orderId } }))!.status).toBe(OrderStatus.PENDING);
+        const operatorResponse = await request(app)
+          .patch(`/api/v1/operator/orders/${orderId}/cancel`)
+          .set('Cookie', operatorCookie);
 
-      const operatorResponse = await request(app)
-        .patch(`/api/v1/operator/orders/${orderId}/cancel`)
-        .set('Cookie', operatorCookie);
-
-      expect(operatorResponse.status).toBe(200);
-      expect(operatorResponse.body.data).toMatchObject({ id: orderId, status: OrderStatus.CANCELLED });
-      expect(await prisma.menuItem.findUnique({ where: { id: SEED_IDS.icedLatte } })).toMatchObject({ stockQuantity: latteAfterReservation + 2 });
-      expect(await prisma.menuItem.findUnique({ where: { id: SEED_IDS.chickenSandwich } })).toMatchObject({ stockQuantity: sandwichAfterReservation + 1 });
-      expect(await prisma.order.findUnique({ where: { id: orderId } })).toMatchObject({ status: OrderStatus.CANCELLED });
+        expect(operatorResponse.status).toBe(200);
+        expect(operatorResponse.body.data).toMatchObject({ id: orderId, status: OrderStatus.CANCELLED });
+        expect(await prisma.menuItem.findUnique({ where: { id: SEED_IDS.icedLatte } })).toMatchObject({ stockQuantity: latteAfterReservation + 2 });
+        expect(await prisma.menuItem.findUnique({ where: { id: SEED_IDS.chickenSandwich } })).toMatchObject({ stockQuantity: sandwichAfterReservation + 1 });
+        expect(await prisma.order.findUnique({ where: { id: orderId } })).toMatchObject({ status: OrderStatus.CANCELLED });
+      } finally {
+        await prisma.menuItem.update({ where: { id: SEED_IDS.icedLatte }, data: { stockQuantity: latteOriginalStock } });
+        await prisma.menuItem.update({ where: { id: SEED_IDS.chickenSandwich }, data: { stockQuantity: sandwichOriginalStock } });
+      }
     });
   });
 
@@ -247,6 +253,119 @@ describe('F-04: Operator Order Management (RED Phase)', () => {
         customerId: before!.customerId,
       });
       expect(after?.items).toEqual(before?.items);
+    });
+
+    it('F07-T03: rejects malformed IDs and invalid transition request bodies', async () => {
+      const order = await createTestOrder({ customerId: SEED_IDS.customerA, status: OrderStatus.ACCEPTED });
+      const invalidBodies: Array<{ label: string; body?: unknown }> = [
+        { label: 'missing body' },
+        { label: 'empty object', body: {} },
+        { label: 'null target', body: { status: null } },
+        { label: 'numeric target', body: { status: 1 } },
+        { label: 'unknown target', body: { status: 'COOKING' } },
+        { label: 'extra field', body: { status: 'PREPARING', paymentStatus: 'PAID_SIMULATED' } },
+      ];
+
+      const malformedId = await request(app)
+        .patch('/api/v1/operator/orders/not-a-uuid/status')
+        .set('Cookie', operatorCookie)
+        .send({ status: OrderStatus.PREPARING });
+      expect(malformedId.status).toBe(400);
+      expect(malformedId.body.error.code).toBe('BAD_REQUEST');
+
+      for (const invalid of invalidBodies) {
+        let call = request(app)
+          .patch(`/api/v1/operator/orders/${order.id}/status`)
+          .set('Cookie', operatorCookie);
+        if (invalid.label !== 'missing body') call = call.send(invalid.body);
+        const response = await call;
+        expect(response.status, invalid.label).toBe(400);
+        expect(response.body.error.code, invalid.label).toBe('INVALID_FULFILLMENT_STATUS');
+      }
+      const nullBody = await request(app)
+        .patch(`/api/v1/operator/orders/${order.id}/status`)
+        .set('Cookie', operatorCookie)
+        .type('json')
+        .send('null');
+      expect(nullBody.status).toBe(400);
+      expect(nullBody.body.error.code).toBe('INVALID_FULFILLMENT_STATUS');
+      expect(await prisma.order.findUnique({ where: { id: order.id } })).toMatchObject({ status: OrderStatus.ACCEPTED });
+    });
+
+    it('F07-T04: rejects anonymous and CUSTOMER updates and reports an absent order', async () => {
+      const order = await createTestOrder({ customerId: SEED_IDS.customerA, status: OrderStatus.ACCEPTED });
+      const anonymous = await request(app).patch(`/api/v1/operator/orders/${order.id}/status`).send({ status: OrderStatus.PREPARING });
+      const customer = await request(app)
+        .patch(`/api/v1/operator/orders/${order.id}/status`)
+        .set('Cookie', customerCookie)
+        .send({ status: OrderStatus.PREPARING });
+      const absent = await request(app)
+        .patch('/api/v1/operator/orders/c9999999-9999-4999-8999-999999999999/status')
+        .set('Cookie', operatorCookie)
+        .send({ status: OrderStatus.PREPARING });
+
+      expect(anonymous.status).toBe(401);
+      expect(customer.status).toBe(403);
+      expect(absent.status).toBe(404);
+      expect(absent.body.error.code).toBe('ORDER_NOT_FOUND');
+      const absentWithDisallowedTarget = await request(app)
+        .patch('/api/v1/operator/orders/c9999999-9999-4999-8999-999999999999/status')
+        .set('Cookie', operatorCookie)
+        .send({ status: OrderStatus.CANCELLED });
+      expect(absentWithDisallowedTarget.status).toBe(404);
+      expect(absentWithDisallowedTarget.body.error.code).toBe('ORDER_NOT_FOUND');
+      expect(await prisma.order.findUnique({ where: { id: order.id } })).toMatchObject({ status: OrderStatus.ACCEPTED });
+    });
+
+    it('F07-T05: concurrent requests for one adjacent transition have exactly one winner', async () => {
+      const order = await createTestOrder({ customerId: SEED_IDS.customerA, status: OrderStatus.ACCEPTED });
+      const [first, second] = await Promise.all([
+        request(app).patch(`/api/v1/operator/orders/${order.id}/status`).set('Cookie', operatorCookie).send({ status: OrderStatus.PREPARING }),
+        request(app).patch(`/api/v1/operator/orders/${order.id}/status`).set('Cookie', operatorCookie).send({ status: OrderStatus.PREPARING }),
+      ]);
+
+      expect([first.status, second.status].sort()).toEqual([200, 409]);
+      const loser = first.status === 409 ? first : second;
+      expect(loser.body.error.code).toBe('ORDER_NOT_PENDING');
+      expect(await prisma.order.findUnique({ where: { id: order.id } })).toMatchObject({ status: OrderStatus.PREPARING });
+    });
+
+    it('F07-T06: owner reads the latest persisted status and another customer remains hidden', async () => {
+      const order = await createTestOrder({ customerId: SEED_IDS.customerA, status: OrderStatus.ACCEPTED });
+      const advanced = await request(app)
+        .patch(`/api/v1/operator/orders/${order.id}/status`)
+        .set('Cookie', operatorCookie)
+        .send({ status: OrderStatus.PREPARING });
+      expect(advanced.status).toBe(200);
+
+      const ownerList = await request(app).get('/api/v1/orders').set('Cookie', customerCookie);
+      const ownerDetail = await request(app).get(`/api/v1/orders/${order.id}`).set('Cookie', customerCookie);
+      const otherDetail = await request(app).get(`/api/v1/orders/${order.id}`).set('Cookie', customerBCookie);
+
+      expect(ownerList.status).toBe(200);
+      expect(ownerList.body.data).toEqual(expect.arrayContaining([expect.objectContaining({ id: order.id, status: OrderStatus.PREPARING })]));
+      expect(ownerDetail.status).toBe(200);
+      expect(ownerDetail.body.data.status).toBe(OrderStatus.PREPARING);
+      expect(otherDetail.status).toBe(404);
+      expect(otherDetail.body.error.code).toBe('ORDER_NOT_FOUND');
+    });
+
+    it('F07-T07: historical null estimate remains null through fulfillment and completion stays unpaid', async () => {
+      const order = await createTestOrder({ customerId: SEED_IDS.customerA, status: OrderStatus.ACCEPTED });
+      expect(order.estimatedReadyAt).toBeNull();
+      for (const status of [OrderStatus.PREPARING, OrderStatus.READY, OrderStatus.COMPLETED]) {
+        const response = await request(app)
+          .patch(`/api/v1/operator/orders/${order.id}/status`)
+          .set('Cookie', operatorCookie)
+          .send({ status });
+        expect(response.status).toBe(200);
+        expect(response.body.data).toMatchObject({ status, estimatedReadyAt: null });
+        expect(await prisma.order.findUnique({ where: { id: order.id } })).toMatchObject({
+          status,
+          paymentStatus: PaymentStatus.UNPAID,
+          estimatedReadyAt: null,
+        });
+      }
     });
   });
 

@@ -4,6 +4,7 @@ import {
   fetchCurrentUser,
   fetchOrder,
   fetchOrders,
+  cancelCustomerOrder,
   formatEstimatedReadyTime,
   formatOrderPrice,
   readCart,
@@ -94,8 +95,25 @@ export function CartPage() {
   </PageFrame>;
 }
 
-function OrderCard({ order }: { order: CustomerOrder }) {
-  return <li className="saved-order"><a href={`/orders/${order.id}`}><span><strong>Order {order.id.slice(0, 8)}</strong><small>{new Date(order.createdAt).toLocaleString()}</small></span><span><strong>{formatOrderPrice(order.totalSatang)}</strong><small>{order.status}</small></span></a></li>;
+function OrderEstimate({ order, as: Element }: { order: CustomerOrder; as: 'small' | 'p' }) {
+  if ((order.status !== 'ACCEPTED' && order.status !== 'PREPARING') || !order.estimatedReadyAt) return null;
+  return <Element>Estimated ready: <time dateTime={order.estimatedReadyAt}>{formatEstimatedReadyTime(order.estimatedReadyAt)}</time></Element>;
+}
+
+function OrderCard({ order, onCancel, cancellingId }: {
+  order: CustomerOrder;
+  onCancel: (order: CustomerOrder) => void;
+  cancellingId: string | null;
+}) {
+  return <li className="saved-order">
+    <a href={`/orders/${order.id}`}>
+      <span><strong>Order {order.id.slice(0, 8)}</strong><small>{new Date(order.createdAt).toLocaleString()}</small></span>
+      <span><strong>{formatOrderPrice(order.totalSatang)}</strong><small>{order.status}</small><OrderEstimate order={order} as="small" /></span>
+    </a>
+    {order.status === 'PENDING' && <button type="button" className="btn btn-outline btn-sm" disabled={cancellingId !== null} onClick={() => onCancel(order)}>
+      {cancellingId === order.id ? 'Cancelling…' : 'Cancel order'}
+    </button>}
+  </li>;
 }
 
 export function OrdersPage() {
@@ -103,6 +121,25 @@ export function OrdersPage() {
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  async function handleCancel(order: CustomerOrder) {
+    if (cancellingId !== null || !window.confirm('Cancel this pending order?')) return;
+    setCancellingId(order.id);
+    setError('');
+    try {
+      const result = await cancelCustomerOrder(order.id);
+      setOrders((current) => current.map((entry) => entry.id === result.id ? { ...entry, status: result.status } : entry));
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : 'Could not cancel this order. Refresh and try again.');
+    } finally {
+      try {
+        setOrders(await fetchOrders());
+      } catch {
+        setError((current) => current || 'Could not refresh your orders.');
+      }
+      setCancellingId(null);
+    }
+  }
   useEffect(() => {
     fetchCurrentUser().then(async (current) => {
       setUser(current);
@@ -114,7 +151,7 @@ export function OrdersPage() {
     {loading && <p role="status">Loading your orders…</p>}{error && <p className="order-error" role="alert">{error}</p>}
     {!loading && !error && !user && <SignInNotice />}
     {!loading && !error && user?.role === 'OPERATOR' && <section className="order-panel"><p>Order history is available to Customer accounts.</p></section>}
-    {!loading && !error && user?.role === 'CUSTOMER' && (orders.length ? <ul className="saved-orders">{orders.map((order) => <OrderCard key={order.id} order={order} />)}</ul> : <section className="order-panel"><p>You have not placed an order yet.</p><a className="btn btn-primary" href="/menu">Browse menu</a></section>)}
+    {!loading && user?.role === 'CUSTOMER' && (orders.length ? <ul className="saved-orders">{orders.map((order) => <OrderCard key={order.id} order={order} onCancel={handleCancel} cancellingId={cancellingId} />)}</ul> : !error && <section className="order-panel"><p>You have not placed an order yet.</p><a className="btn btn-primary" href="/menu">Browse menu</a></section>)}
   </PageFrame>;
 }
 
@@ -122,17 +159,39 @@ export function OrderDetailPage({ orderId }: { orderId: string }) {
   const [order, setOrder] = useState<CustomerOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [cancelling, setCancelling] = useState(false);
+  const [notice, setNotice] = useState('');
+  async function handleCancel() {
+    if (cancelling || !order || order.status !== 'PENDING' || !window.confirm('Cancel this pending order?')) return;
+    setCancelling(true);
+    setError('');
+    setNotice('');
+    try {
+      const result = await cancelCustomerOrder(order.id);
+      setOrder({ ...order, status: result.status });
+      setNotice('Order cancelled.');
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : 'Could not cancel this order. Refresh and try again.');
+    } finally {
+      try {
+        setOrder(await fetchOrder(order.id));
+      } catch {
+        setError((current) => current || 'Could not refresh this order.');
+      }
+      setCancelling(false);
+    }
+  }
   useEffect(() => {
     fetchOrder(orderId).then(setOrder).catch((requestError: unknown) => setError(requestError instanceof Error ? requestError.message : 'Could not load this order.'))
       .finally(() => setLoading(false));
   }, [orderId]);
   return <PageFrame><section className="order-heading"><p className="eyebrow">Saved order</p><h1>Order details</h1></section>
-    {loading && <p role="status">Loading order…</p>}{error && <section className="order-panel"><p className="order-error" role="alert">{error}</p><p>This order may not exist or may belong to another Customer.</p><a href="/orders">Back to my orders</a></section>}
+    {loading && <p role="status">Loading order…</p>}{error && <section className="order-panel"><p className="order-error" role="alert">{error}</p>{!order && <><p>This order may not exist or may belong to another Customer.</p><a href="/orders">Back to my orders</a></>}</section>}
     {order && <section className="order-panel">
       <p>Status: <strong>{order.status}</strong></p>
-      {order.status === 'ACCEPTED' && order.estimatedReadyAt && (
-        <p>Estimated ready: <time dateTime={order.estimatedReadyAt}>{formatEstimatedReadyTime(order.estimatedReadyAt)}</time></p>
-      )}
+      {order.status === 'PENDING' && <button type="button" className="btn btn-outline" disabled={cancelling} onClick={handleCancel}>{cancelling ? 'Cancelling…' : 'Cancel order'}</button>}
+      {notice && <p role="status">{notice}</p>}
+      <OrderEstimate order={order} as="p" />
       <p>Payment: <strong>{order.paymentStatus}</strong></p><ul className="review-lines">{order.items.map((item) => <li key={item.id}><div><strong>{item.menuItem?.name || 'Menu item'}</strong><span>{item.quantity} × {formatOrderPrice(item.unitPriceSatang)}</span></div><strong>{formatOrderPrice(item.lineTotalSatang)}</strong></li>)}</ul><div className="review-total"><span>Saved total</span><strong>{formatOrderPrice(order.totalSatang)}</strong></div><p className="order-muted">Order ID: <code>{order.id}</code></p><a href="/orders">Back to my orders</a>
     </section>}
   </PageFrame>;
