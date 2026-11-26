@@ -17,6 +17,13 @@ export interface CustomerOrder {
   items: OrderItem[];
 }
 
+export const orderStatuses = ['PENDING', 'ACCEPTED', 'PREPARING', 'READY', 'COMPLETED', 'CANCELLED'] as const;
+
+export interface OrderFilters {
+  status?: string;
+  orderId?: string;
+}
+
 interface ApiError {
   error?: { code?: string; message?: string };
 }
@@ -47,8 +54,12 @@ export async function submitOrder(items: Array<{ menuItemId: string; quantity: n
   return result.data;
 }
 
-export async function fetchOrders() {
-  const response = await fetch('/api/v1/orders', { credentials: 'include' });
+export async function fetchOrders(filters: OrderFilters = {}, signal?: AbortSignal) {
+  const query = new URLSearchParams();
+  if (filters.status) query.set('status', filters.status);
+  if (filters.orderId) query.set('orderId', filters.orderId);
+  const url = query.size ? `/api/v1/orders?${query}` : '/api/v1/orders';
+  const response = await fetch(url, { credentials: 'include', signal });
   const result = await readResponse<{ data: CustomerOrder[] }>(response);
   return result.data;
 }

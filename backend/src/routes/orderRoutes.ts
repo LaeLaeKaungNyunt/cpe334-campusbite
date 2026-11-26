@@ -5,6 +5,7 @@ import { requireRole } from '../middleware/auth.js';
 
 export const orderRouter = Router();
 const ORDER_UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const FULL_ORDER_ID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const POSTGRES_INT_MAX = 2_147_483_647;
 
 const invalidOrder = (res: Parameters<Parameters<typeof orderRouter.post>[1]>[1]) =>
@@ -103,9 +104,26 @@ orderRouter.post('/', requireRole(UserRole.CUSTOMER), async (req, res, next) => 
 });
 
 orderRouter.get('/', requireRole(UserRole.CUSTOMER), async (req, res, next) => {
+  // Read the original query so Express cannot drop keys or fold bracket syntax.
+  const queryStart = req.originalUrl.indexOf('?');
+  const query = new URLSearchParams(queryStart === -1 ? '' : req.originalUrl.slice(queryStart));
+  const status = query.get('status');
+  const orderId = query.get('orderId');
+  const validStatus = Object.values(OrderStatus).find((value) => value === status);
+  if (
+    [...query.keys()].some((key) => key !== 'status' && key !== 'orderId') ||
+    query.getAll('status').length > 1 || query.getAll('orderId').length > 1 ||
+    (status !== null && !validStatus) ||
+    (orderId !== null && (orderId.length !== 36 || !FULL_ORDER_ID_REGEX.test(orderId)))
+  ) {
+    return res.status(400).json({
+      error: { code: 'INVALID_ORDER_FILTER', message: 'Use a valid order status and full order ID, with each filter supplied at most once.' },
+    });
+  }
+
   try {
     const orders = await prisma.order.findMany({
-      where: { customerId: customerId(req) },
+      where: { customerId: customerId(req), status: validStatus, id: orderId?.toLowerCase() },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       include: { items: { orderBy: { menuItemId: 'asc' }, include: { menuItem: { select: { name: true } } } } },
     });
