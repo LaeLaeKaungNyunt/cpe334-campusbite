@@ -4,7 +4,7 @@
 
 **Requirements** FR-10, FR-11, BR-07, BR-08, BR-13, NFR-01, NFR-05
 
-**Verification status** Designed / Not run
+**Verification status** Partially implemented and verified at the Deliverable 2 checkpoint. Customer status and exact full-UUID search were implemented through PR #60 and included in release PR #61 (commit `68420a4`). Remaining Customer date filters, Operator filters, completed-sales reporting, and NFR-05 benchmarking are not yet completed.
 
 Customers can find their own orders from **My orders**. Operators can filter café orders and view sales totals and units sold by product. The report covers completed and simulated-paid orders placed during the selected period and uses checkout price snapshots.
 
@@ -89,7 +89,7 @@ An empty result uses the same shape with both totals zero and `products: []`.
 
 ## 4. Acceptance criteria
 
-Every criterion is **Designed / Not run** until implementation and verification.
+The original v1.0 contract defined all criteria before implementation. At the 27 November checkpoint, AC01's Customer search milestone was implemented and tested. AC05 has partial Customer UI verification; its full scope remains unfinished. AC02–AC04 and AC06 are not fully implemented or verified. See the F-09 traceability section for the recorded scope and evidence.
 
 | ID | Acceptance criterion | Requirements |
 |---|---|---|
@@ -102,7 +102,7 @@ Every criterion is **Designed / Not run** until implementation and verification.
 
 ## 5. Software Test Specification
 
-Use Vitest and Supertest with isolated PostgreSQL and synthetic Customer A, Customer B, Operator, guest, and expired sessions. Use independent fixtures per case. Assert JSON keys, codes, and returned IDs or totals. Exercise browser controls using Playwright. Every case is **Designed / Not run**.
+Use Vitest and Supertest with isolated PostgreSQL and synthetic Customer A, Customer B, Operator, guest, and expired sessions. Use independent fixtures per case. Assert JSON keys, codes, and returned IDs or totals. Exercise browser controls using Playwright. At the 27 November checkpoint, backend test identifiers `S3-F09-T01`, `S3-F09-T02`, and `S3-F09-T04` were present in `orderSearch.test.ts`. The complete file passed 26/26 tests within the 161/161 backend regression. This does not establish completion of every scenario within those STS cases. The other planned case IDs (T03 and T05–T08) were not located in the audited implementation/test files. Customer UI behavior was manually verified, but the full T07 browser case remains unverified.
 
 | Test ID | AC | Setup and action | Expected outcome |
 |---|---|---|---|
