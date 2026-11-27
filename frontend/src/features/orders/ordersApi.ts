@@ -12,8 +12,16 @@ export interface CustomerOrder {
   status: string;
   paymentStatus: string;
   totalSatang: number;
+  estimatedReadyAt: string | null;
   createdAt: string;
   items: OrderItem[];
+}
+
+export const orderStatuses = ['PENDING', 'ACCEPTED', 'PREPARING', 'READY', 'COMPLETED', 'CANCELLED'] as const;
+
+export interface OrderFilters {
+  status?: string;
+  orderId?: string;
 }
 
 interface ApiError {
@@ -46,8 +54,12 @@ export async function submitOrder(items: Array<{ menuItemId: string; quantity: n
   return result.data;
 }
 
-export async function fetchOrders() {
-  const response = await fetch('/api/v1/orders', { credentials: 'include' });
+export async function fetchOrders(filters: OrderFilters = {}, signal?: AbortSignal) {
+  const query = new URLSearchParams();
+  if (filters.status) query.set('status', filters.status);
+  if (filters.orderId) query.set('orderId', filters.orderId);
+  const url = query.size ? `/api/v1/orders?${query}` : '/api/v1/orders';
+  const response = await fetch(url, { credentials: 'include', signal });
   const result = await readResponse<{ data: CustomerOrder[] }>(response);
   return result.data;
 }
@@ -55,6 +67,15 @@ export async function fetchOrders() {
 export async function fetchOrder(id: string) {
   const response = await fetch(`/api/v1/orders/${encodeURIComponent(id)}`, { credentials: 'include' });
   const result = await readResponse<{ data: CustomerOrder }>(response);
+  return result.data;
+}
+
+export async function cancelCustomerOrder(id: string): Promise<{ id: string; status: 'CANCELLED'; updatedAt: string }> {
+  const response = await fetch(`/api/v1/orders/${encodeURIComponent(id)}/cancel`, {
+    method: 'PATCH',
+    credentials: 'include',
+  });
+  const result = await readResponse<{ data: { id: string; status: 'CANCELLED'; updatedAt: string } }>(response);
   return result.data;
 }
 
@@ -74,4 +95,14 @@ export function saveCart(cart: Record<string, number>) {
 
 export function formatOrderPrice(satang: number) {
   return `฿${(satang / 100).toFixed(2)}`;
+}
+
+const readyTimeFormatter = new Intl.DateTimeFormat('en-GB', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+  timeZone: 'Asia/Bangkok',
+});
+
+export function formatEstimatedReadyTime(estimatedReadyAt: string) {
+  return readyTimeFormatter.format(new Date(estimatedReadyAt));
 }

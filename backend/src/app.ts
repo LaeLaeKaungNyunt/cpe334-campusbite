@@ -1,11 +1,13 @@
 import { fileURLToPath } from 'node:url';
 import { extname, join } from 'node:path';
 import express, { type Request, type Response, type NextFunction } from 'express';
-import { cookieParserMiddleware, authenticate } from './middleware/auth.js';
+import { UserRole } from '@prisma/client';
+import { cookieParserMiddleware, authenticate, requireRole } from './middleware/auth.js';
 import { authRouter } from './routes/auth.js';
 import { menuRouter } from './routes/menuRoutes.js';
 import { orderRouter } from './routes/orderRoutes.js';
 import { operatorRouter } from './routes/operatorRoutes.js';
+import { operatorMenuRouter } from './routes/operatorMenuRoutes.js';
 import { prisma } from './lib/prisma.js';
 
 export const app = express();
@@ -15,6 +17,8 @@ app.disable('x-powered-by');
 
 // Middleware: parse incoming cookies and JSON bodies
 app.use(cookieParserMiddleware);
+// Authenticate and parse menu administration requests in the dedicated router.
+app.use('/api/v1/operator/menu-items', operatorMenuRouter);
 app.use(express.json());
 
 // Global session resolution middleware
@@ -93,6 +97,38 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     err.status === 400;
   if (isOrderJsonParseError) {
     res.status(400).json({ error: { code: 'INVALID_ORDER', message: 'Order request must be valid JSON.' } });
+    return;
+  }
+  if (
+    _req.method === 'PATCH' &&
+    /^\/api\/v1\/operator\/orders\/[^/]+\/status\/?$/i.test(_req.path) &&
+    typeof err === 'object' &&
+    err !== null &&
+    'type' in err &&
+    err.type === 'entity.parse.failed'
+  ) {
+    res.status(400).json({
+      error: { code: 'INVALID_FULFILLMENT_STATUS', message: 'Order status request must be valid JSON.' },
+    });
+    return;
+  }
+  if (
+    _req.method === 'PATCH' &&
+    /^\/api\/v1\/operator\/orders\/[^/]+\/payment\/?$/i.test(_req.path) &&
+    typeof err === 'object' &&
+    err !== null &&
+    'type' in err &&
+    (err.type === 'entity.parse.failed' || err.type === 'entity.too.large' ||
+     err.type === 'charset.unsupported' || err.type === 'encoding.unsupported' || err.type === 'request.size.invalid')
+  ) {
+    // A parser rejection bypasses the usual session and operator middleware.
+    void authenticate(_req, res, () => {
+      requireRole(UserRole.OPERATOR)(_req, res, () => {
+        res.status(400).json({
+          error: { code: 'INVALID_PAYMENT_STATUS', message: 'Payment request must be valid JSON.' },
+        });
+      });
+    });
     return;
   }
 

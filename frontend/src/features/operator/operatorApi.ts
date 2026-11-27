@@ -17,6 +17,7 @@ export interface OperatorOrder {
   status: 'PENDING' | 'ACCEPTED' | 'PREPARING' | 'READY' | 'COMPLETED' | 'CANCELLED';
   paymentStatus: 'UNPAID' | 'PAID_SIMULATED';
   totalSatang: number;
+  estimatedReadyAt: string | null;
   createdAt: string;
   updatedAt: string;
   customer?: {
@@ -29,9 +30,35 @@ export interface OperatorOrder {
 export interface AcceptOrderResult {
   id: string;
   status: 'ACCEPTED';
-  paymentStatus: string;
-  totalSatang: number;
+  estimatedReadyAt: string;
   updatedAt: string;
+}
+
+export interface OrderMutationResult {
+  id: string;
+  status: OperatorOrder['status'];
+  estimatedReadyAt: string | null;
+  updatedAt: string;
+}
+
+export class OperatorOrderError extends Error {
+  constructor(readonly status: number, message: string) {
+    super(message);
+  }
+}
+
+async function patchOrder<T>(path: string, body?: unknown): Promise<T> {
+  const response = await fetch(path, {
+    method: 'PATCH',
+    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const result = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new OperatorOrderError(response.status, result?.error?.message || `Order update failed (HTTP ${response.status}).`);
+  }
+  return result.data as T;
 }
 
 export async function fetchOperatorOrders(signal?: AbortSignal): Promise<OperatorOrder[]> {
@@ -49,13 +76,14 @@ export async function fetchOperatorOrders(signal?: AbortSignal): Promise<Operato
   return json.data;
 }
 
-export async function acceptOperatorOrder(orderId: string): Promise<AcceptOrderResult> {
+export async function acceptOperatorOrder(orderId: string, estimatedPrepMinutes: number): Promise<AcceptOrderResult> {
   const response = await fetch(`/api/v1/operator/orders/${orderId}/accept`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
     },
     credentials: 'include',
+    body: JSON.stringify({ estimatedPrepMinutes }),
   });
 
   if (!response.ok) {
@@ -65,4 +93,16 @@ export async function acceptOperatorOrder(orderId: string): Promise<AcceptOrderR
 
   const json = await response.json();
   return json.data;
+}
+
+export async function cancelOperatorOrder(orderId: string): Promise<{ id: string; status: 'CANCELLED'; updatedAt: string }> {
+  return patchOrder(`/api/v1/operator/orders/${encodeURIComponent(orderId)}/cancel`);
+}
+
+export async function updateOperatorOrderStatus(orderId: string, status: 'PREPARING' | 'READY' | 'COMPLETED'): Promise<OrderMutationResult> {
+  return patchOrder(`/api/v1/operator/orders/${encodeURIComponent(orderId)}/status`, { status });
+}
+
+export function recordSimulatedPayment(orderId: string): Promise<{ id: string; paymentStatus: 'PAID_SIMULATED'; updatedAt: string }> {
+  return patchOrder(`/api/v1/operator/orders/${encodeURIComponent(orderId)}/payment`, { paymentStatus: 'PAID_SIMULATED' });
 }

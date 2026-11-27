@@ -1,9 +1,12 @@
 import { Router, type Request } from 'express';
-import { OrderStatus, PaymentStatus, UserRole } from '@prisma/client';
+import { OrderStatus, PaymentStatus, Prisma, UserRole } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { requireRole } from '../middleware/auth.js';
 
 export const orderRouter = Router();
+const ORDER_UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const FULL_ORDER_ID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const POSTGRES_INT_MAX = 2_147_483_647;
 
 const invalidOrder = (res: Parameters<Parameters<typeof orderRouter.post>[1]>[1]) =>
   res.status(400).json({ error: { code: 'INVALID_ORDER', message: 'Order request is invalid.' } });
@@ -30,9 +33,10 @@ function parseItems(body: unknown): RequestedItem[] | null {
     // follow RFC 4122's version/variant bit conventions.
     if (typeof item.menuItemId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(item.menuItemId)) return null;
     if (!Number.isSafeInteger(item.quantity) || (item.quantity as number) <= 0) return null;
-    if (seen.has(item.menuItemId)) return null;
-    seen.add(item.menuItemId);
-    parsed.push({ menuItemId: item.menuItemId, quantity: item.quantity as number });
+    const menuItemId = item.menuItemId.toLowerCase();
+    if (seen.has(menuItemId)) return null;
+    seen.add(menuItemId);
+    parsed.push({ menuItemId, quantity: item.quantity as number });
   }
   return parsed;
 }
@@ -46,35 +50,30 @@ orderRouter.post('/', requireRole(UserRole.CUSTOMER), async (req, res, next) => 
   if (!requestedItems) return invalidOrder(res);
 
   try {
-    // Stable ordering reduces lock-order inversions when two carts overlap.
-    const orderedLines = [...requestedItems].sort((a, b) => a.menuItemId.localeCompare(b.menuItemId));
+    // Match cancellation's ascending UUID order when acquiring menu row locks.
+    const orderedLines = [...requestedItems].sort((a, b) => a.menuItemId.localeCompare(b.menuItemId, 'en'));
     const created = await prisma.$transaction(async (tx) => {
-      const menuItems = await tx.menuItem.findMany({
-        where: { id: { in: orderedLines.map((line) => line.menuItemId) } },
-        select: { id: true, priceSatang: true, isActive: true },
-      });
-      const byId = new Map(menuItems.map((item) => [item.id, item]));
       const pricedLines: Array<RequestedItem & { unitPriceSatang: number; lineTotalSatang: number }> = [];
 
       for (const line of orderedLines) {
-        const item = byId.get(line.menuItemId);
-        if (!item || !item.isActive) throw new StockUnavailableError();
+        if (line.quantity > POSTGRES_INT_MAX) throw new StockUnavailableError();
 
-        // The predicate is checked by PostgreSQL as part of the write. Concurrent
-        // requests cannot both decrement a row below zero, even if they read it together.
-        const reservation = await tx.menuItem.updateMany({
+        // PostgreSQL rechecks availability after waiting for a competing write.
+        // RETURNING supplies the price from the same row that reserved the stock.
+        const [reserved] = await tx.menuItem.updateManyAndReturn({
           where: { id: line.menuItemId, isActive: true, stockQuantity: { gte: line.quantity } },
           data: { stockQuantity: { decrement: line.quantity } },
+          select: { priceSatang: true },
         });
-        if (reservation.count !== 1) throw new StockUnavailableError();
+        if (!reserved) throw new StockUnavailableError();
 
-        const lineTotalSatang = item.priceSatang * line.quantity;
-        if (!Number.isSafeInteger(lineTotalSatang)) throw new InvalidOrderError();
-        pricedLines.push({ ...line, unitPriceSatang: item.priceSatang, lineTotalSatang });
+        const lineTotalSatang = reserved.priceSatang * line.quantity;
+        if (lineTotalSatang > POSTGRES_INT_MAX) throw new InvalidOrderError();
+        pricedLines.push({ ...line, unitPriceSatang: reserved.priceSatang, lineTotalSatang });
       }
 
       const totalSatang = pricedLines.reduce((total, line) => total + line.lineTotalSatang, 0);
-      if (!Number.isSafeInteger(totalSatang)) throw new InvalidOrderError();
+      if (totalSatang > POSTGRES_INT_MAX) throw new InvalidOrderError();
 
       return tx.order.create({
         data: {
@@ -93,7 +92,7 @@ orderRouter.post('/', requireRole(UserRole.CUSTOMER), async (req, res, next) => 
         },
         include: { items: { orderBy: { menuItemId: 'asc' } } },
       });
-    });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
     return res.status(201).json({ data: created });
   } catch (error) {
     if (error instanceof StockUnavailableError) {
@@ -105,9 +104,26 @@ orderRouter.post('/', requireRole(UserRole.CUSTOMER), async (req, res, next) => 
 });
 
 orderRouter.get('/', requireRole(UserRole.CUSTOMER), async (req, res, next) => {
+  // Read the original query so Express cannot drop keys or fold bracket syntax.
+  const queryStart = req.originalUrl.indexOf('?');
+  const query = new URLSearchParams(queryStart === -1 ? '' : req.originalUrl.slice(queryStart));
+  const status = query.get('status');
+  const orderId = query.get('orderId');
+  const validStatus = Object.values(OrderStatus).find((value) => value === status);
+  if (
+    [...query.keys()].some((key) => key !== 'status' && key !== 'orderId') ||
+    query.getAll('status').length > 1 || query.getAll('orderId').length > 1 ||
+    (status !== null && !validStatus) ||
+    (orderId !== null && (orderId.length !== 36 || !FULL_ORDER_ID_REGEX.test(orderId)))
+  ) {
+    return res.status(400).json({
+      error: { code: 'INVALID_ORDER_FILTER', message: 'Use a valid order status and full order ID, with each filter supplied at most once.' },
+    });
+  }
+
   try {
     const orders = await prisma.order.findMany({
-      where: { customerId: customerId(req) },
+      where: { customerId: customerId(req), status: validStatus, id: orderId?.toLowerCase() },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       include: { items: { orderBy: { menuItemId: 'asc' }, include: { menuItem: { select: { name: true } } } } },
     });
@@ -118,7 +134,7 @@ orderRouter.get('/', requireRole(UserRole.CUSTOMER), async (req, res, next) => {
 });
 
 orderRouter.get('/:id', requireRole(UserRole.CUSTOMER), async (req, res, next) => {
-  if (typeof req.params.id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(req.params.id)) {
+  if (!ORDER_UUID_REGEX.test(req.params.id)) {
     return res.status(404).json({ error: { code: 'ORDER_NOT_FOUND', message: 'Order not found.' } });
   }
   try {
@@ -128,6 +144,54 @@ orderRouter.get('/:id', requireRole(UserRole.CUSTOMER), async (req, res, next) =
     });
     if (!order) return res.status(404).json({ error: { code: 'ORDER_NOT_FOUND', message: 'Order not found.' } });
     return res.status(200).json({ data: order });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+orderRouter.patch('/:id/cancel', requireRole(UserRole.CUSTOMER), async (req, res, next) => {
+  const id = req.params.id;
+  if (!ORDER_UUID_REGEX.test(id)) {
+    return res.status(404).json({ error: { code: 'ORDER_NOT_FOUND', message: 'Order not found.' } });
+  }
+
+  try {
+    const outcome = await prisma.$transaction(async (tx) => {
+      const changed = await tx.order.updateMany({
+        where: { id, customerId: customerId(req), status: OrderStatus.PENDING },
+        data: { status: OrderStatus.CANCELLED },
+      });
+
+      if (changed.count === 0) {
+        const existing = await tx.order.findFirst({
+          where: { id, customerId: customerId(req) },
+          select: { id: true, status: true },
+        });
+        return existing ? { kind: 'conflict' as const } : { kind: 'not-found' as const };
+      }
+
+      const items = await tx.orderItem.findMany({ where: { orderId: id }, orderBy: { menuItemId: 'asc' } });
+      for (const item of items) {
+        await tx.menuItem.update({
+          where: { id: item.menuItemId },
+          data: { stockQuantity: { increment: item.quantity } },
+        });
+      }
+
+      const updated = await tx.order.findUniqueOrThrow({
+        where: { id },
+        select: { id: true, status: true, updatedAt: true },
+      });
+      return { kind: 'success' as const, updated };
+    });
+
+    if (outcome.kind === 'not-found') {
+      return res.status(404).json({ error: { code: 'ORDER_NOT_FOUND', message: 'Order not found.' } });
+    }
+    if (outcome.kind === 'conflict') {
+      return res.status(409).json({ error: { code: 'ORDER_NOT_PENDING', message: 'Only pending orders can be cancelled.' } });
+    }
+    return res.status(200).json({ data: outcome.updated });
   } catch (error) {
     return next(error);
   }

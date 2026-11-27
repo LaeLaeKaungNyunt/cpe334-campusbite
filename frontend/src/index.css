@@ -505,6 +505,46 @@ footer {
   justify-content: flex-end;
 }
 
+.order-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: 0.85rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.order-filters label {
+  display: grid;
+  gap: 0.35rem;
+  color: #302820;
+  font-weight: 650;
+  min-width: 0;
+}
+
+.order-filters input,
+.order-filters select {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #c4b8a7;
+  border-radius: 8px;
+  background: #fff;
+  color: #302820;
+  font: inherit;
+  font-weight: 400;
+}
+
+.order-filters .order-actions,
+.order-filters .order-error {
+  grid-column: 1 / -1;
+}
+
+.order-filters .order-actions {
+  padding-top: 0;
+}
+
+.order-filters .order-error {
+  margin-bottom: 0;
+}
+
 .order-error {
   padding: 0.8rem 1rem;
   margin-bottom: 1rem;
@@ -528,6 +568,51 @@ footer {
 .saved-orders {
   display: grid;
   gap: 0.8rem;
+}
+
+.menu-admin-layout {
+  display: grid;
+  gap: 1rem;
+}
+
+.menu-admin-notice:empty {
+  position: absolute;
+}
+
+.menu-admin-list {
+  list-style: none;
+}
+
+.menu-admin-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 0;
+}
+
+.menu-admin-list li + li,
+.menu-admin-stock {
+  border-top: 1px solid #eee8dc;
+}
+
+.menu-admin-list li div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.menu-admin-fields {
+  border: 0;
+  min-width: 0;
+}
+
+.menu-admin-stock {
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+
+.menu-admin-stock .btn + .btn {
+  margin-left: 0.5rem;
 }
 
 .saved-order a {
